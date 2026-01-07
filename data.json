@@ -1,0 +1,959 @@
+{
+  "categories": [
+    {
+      "id": 1,
+      "name": "股票/基金",
+      "sortOrder": 0
+    },
+    {
+      "id": 2,
+      "name": "美股",
+      "sortOrder": 1
+    },
+    {
+      "id": 3,
+      "name": "A+H股",
+      "sortOrder": 2
+    },
+    {
+      "id": 4,
+      "name": "日股",
+      "sortOrder": 3
+    },
+    {
+      "id": 5,
+      "name": "黄金",
+      "sortOrder": 4
+    },
+    {
+      "id": 6,
+      "name": "虚拟货币",
+      "sortOrder": 5
+    },
+    {
+      "id": 7,
+      "name": "现金",
+      "sortOrder": 6
+    }
+  ],
+  "assets": [
+    {
+      "id": 1,
+      "categoryId": 2,
+      "name": "谷歌",
+      "currency": "CNY",
+      "sortOrder": 0
+    },
+    {
+      "id": 2,
+      "categoryId": 2,
+      "name": "QQQ （USD）",
+      "currency": "USD",
+      "sortOrder": 1
+    },
+    {
+      "id": 3,
+      "categoryId": 2,
+      "name": "特斯拉（USD）",
+      "currency": "USD",
+      "sortOrder": 2
+    },
+    {
+      "id": 4,
+      "categoryId": 3,
+      "name": "贵州茅台",
+      "currency": "CNY",
+      "sortOrder": 0
+    },
+    {
+      "id": 5,
+      "categoryId": 3,
+      "name": "洋河股份",
+      "currency": "CNY",
+      "sortOrder": 1
+    },
+    {
+      "id": 6,
+      "categoryId": 3,
+      "name": "顺丰控股",
+      "currency": "CNY",
+      "sortOrder": 2
+    },
+    {
+      "id": 7,
+      "categoryId": 3,
+      "name": "景顺长城沪港深精选股票基金（定投中）",
+      "currency": "CNY",
+      "sortOrder": 3
+    },
+    {
+      "id": 8,
+      "categoryId": 4,
+      "name": "易方达日经225指数基金（USD）",
+      "currency": "USD",
+      "sortOrder": 0
+    },
+    {
+      "id": 9,
+      "categoryId": 4,
+      "name": "富达日本价值型基金（USD）",
+      "currency": "USD",
+      "sortOrder": 1
+    },
+    {
+      "id": 10,
+      "categoryId": 4,
+      "name": "日本ETF",
+      "currency": "CNY",
+      "sortOrder": 2
+    },
+    {
+      "id": 11,
+      "categoryId": 5,
+      "name": "黄金ETF",
+      "currency": "CNY",
+      "sortOrder": 0
+    },
+    {
+      "id": 12,
+      "categoryId": 6,
+      "name": "BTC",
+      "currency": "CNY",
+      "sortOrder": 0
+    },
+    {
+      "id": 13,
+      "categoryId": 6,
+      "name": "ETH",
+      "currency": "CNY",
+      "sortOrder": 1
+    },
+    {
+      "id": 14,
+      "categoryId": 7,
+      "name": "余额宝",
+      "currency": "CNY",
+      "sortOrder": 0
+    },
+    {
+      "id": 15,
+      "categoryId": 7,
+      "name": "A股账户",
+      "currency": "CNY",
+      "sortOrder": 1
+    },
+    {
+      "id": 16,
+      "categoryId": 7,
+      "name": "美股账户（USD）",
+      "currency": "USD",
+      "sortOrder": 2
+    },
+    {
+      "id": 17,
+      "categoryId": 7,
+      "name": "港股账户（HKD）",
+      "currency": "HKD",
+      "sortOrder": 3
+    },
+    {
+      "id": 18,
+      "categoryId": 7,
+      "name": "银行现金账户",
+      "currency": "CNY",
+      "sortOrder": 4
+    },
+    {
+      "id": 19,
+      "categoryId": 7,
+      "name": "USDT",
+      "currency": "USD",
+      "sortOrder": 5
+    }
+  ],
+  "snapshots": [
+    {
+      "id": 1,
+      "snapshotDate": "2024-11-19T05:00:00.000Z",
+      "label": "1119"
+    },
+    {
+      "id": 2,
+      "snapshotDate": "2024-11-22T05:00:00.000Z",
+      "label": "1122"
+    },
+    {
+      "id": 3,
+      "snapshotDate": "2024-11-27T05:00:00.000Z",
+      "label": "1127"
+    },
+    {
+      "id": 4,
+      "snapshotDate": "2024-12-07T05:00:00.000Z",
+      "label": "1207"
+    },
+    {
+      "id": 5,
+      "snapshotDate": "2024-12-16T05:00:00.000Z",
+      "label": "1216"
+    },
+    {
+      "id": 6,
+      "snapshotDate": "2025-01-07T05:00:00.000Z",
+      "label": "0107"
+    }
+  ],
+  "assetValues": [
+    {
+      "id": 1,
+      "assetId": 1,
+      "snapshotId": 4,
+      "cnyValue": "27370.5",
+      "changeFromPrevious": "27370.5"
+    },
+    {
+      "id": 2,
+      "assetId": 1,
+      "snapshotId": 5,
+      "cnyValue": "34506",
+      "changeFromPrevious": "7135.5"
+    },
+    {
+      "id": 3,
+      "assetId": 1,
+      "snapshotId": 6,
+      "cnyValue": "37892.7",
+      "changeFromPrevious": "3386.7"
+    },
+    {
+      "id": 4,
+      "assetId": 2,
+      "snapshotId": 1,
+      "cnyValue": "17685",
+      "changeFromPrevious": "0"
+    },
+    {
+      "id": 5,
+      "assetId": 2,
+      "snapshotId": 2,
+      "cnyValue": "50203",
+      "changeFromPrevious": "32518"
+    },
+    {
+      "id": 6,
+      "assetId": 2,
+      "snapshotId": 3,
+      "cnyValue": "52334.1",
+      "changeFromPrevious": "2131.1"
+    },
+    {
+      "id": 7,
+      "assetId": 2,
+      "snapshotId": 4,
+      "cnyValue": "53285.5",
+      "changeFromPrevious": "951.400000000001"
+    },
+    {
+      "id": 8,
+      "assetId": 2,
+      "snapshotId": 5,
+      "cnyValue": "51581.5",
+      "changeFromPrevious": "-1704"
+    },
+    {
+      "id": 9,
+      "assetId": 2,
+      "snapshotId": 6,
+      "cnyValue": "53129.3",
+      "changeFromPrevious": "1547.8"
+    },
+    {
+      "id": 10,
+      "assetId": 3,
+      "snapshotId": 2,
+      "cnyValue": "22180",
+      "changeFromPrevious": "22180"
+    },
+    {
+      "id": 11,
+      "assetId": 3,
+      "snapshotId": 3,
+      "cnyValue": "24232.3",
+      "changeFromPrevious": "2052.3"
+    },
+    {
+      "id": 12,
+      "assetId": 4,
+      "snapshotId": 1,
+      "cnyValue": "287026",
+      "changeFromPrevious": "0"
+    },
+    {
+      "id": 13,
+      "assetId": 4,
+      "snapshotId": 2,
+      "cnyValue": "294200",
+      "changeFromPrevious": "7174"
+    },
+    {
+      "id": 14,
+      "assetId": 4,
+      "snapshotId": 3,
+      "cnyValue": "289460",
+      "changeFromPrevious": "-4740"
+    },
+    {
+      "id": 15,
+      "assetId": 4,
+      "snapshotId": 4,
+      "cnyValue": "286002",
+      "changeFromPrevious": "-3458"
+    },
+    {
+      "id": 16,
+      "assetId": 4,
+      "snapshotId": 5,
+      "cnyValue": "283400",
+      "changeFromPrevious": "-2602"
+    },
+    {
+      "id": 17,
+      "assetId": 4,
+      "snapshotId": 6,
+      "cnyValue": "284772",
+      "changeFromPrevious": "1372"
+    },
+    {
+      "id": 18,
+      "assetId": 5,
+      "snapshotId": 1,
+      "cnyValue": "70090",
+      "changeFromPrevious": "0"
+    },
+    {
+      "id": 19,
+      "assetId": 5,
+      "snapshotId": 2,
+      "cnyValue": "54769",
+      "changeFromPrevious": "-15321"
+    },
+    {
+      "id": 20,
+      "assetId": 5,
+      "snapshotId": 3,
+      "cnyValue": "52848",
+      "changeFromPrevious": "-1921"
+    },
+    {
+      "id": 21,
+      "assetId": 5,
+      "snapshotId": 4,
+      "cnyValue": "50288",
+      "changeFromPrevious": "-2560"
+    },
+    {
+      "id": 22,
+      "assetId": 5,
+      "snapshotId": 5,
+      "cnyValue": "49864",
+      "changeFromPrevious": "-424"
+    },
+    {
+      "id": 23,
+      "assetId": 5,
+      "snapshotId": 6,
+      "cnyValue": "49824",
+      "changeFromPrevious": "-40"
+    },
+    {
+      "id": 24,
+      "assetId": 6,
+      "snapshotId": 1,
+      "cnyValue": "19990",
+      "changeFromPrevious": "0"
+    },
+    {
+      "id": 25,
+      "assetId": 6,
+      "snapshotId": 2,
+      "cnyValue": "11928",
+      "changeFromPrevious": "-8062"
+    },
+    {
+      "id": 26,
+      "assetId": 6,
+      "snapshotId": 3,
+      "cnyValue": "11637",
+      "changeFromPrevious": "-291"
+    },
+    {
+      "id": 27,
+      "assetId": 6,
+      "snapshotId": 4,
+      "cnyValue": "11466",
+      "changeFromPrevious": "-171"
+    },
+    {
+      "id": 28,
+      "assetId": 6,
+      "snapshotId": 5,
+      "cnyValue": "11241",
+      "changeFromPrevious": "-225"
+    },
+    {
+      "id": 29,
+      "assetId": 6,
+      "snapshotId": 6,
+      "cnyValue": "11640",
+      "changeFromPrevious": "399"
+    },
+    {
+      "id": 30,
+      "assetId": 7,
+      "snapshotId": 1,
+      "cnyValue": "34754",
+      "changeFromPrevious": "0"
+    },
+    {
+      "id": 31,
+      "assetId": 7,
+      "snapshotId": 2,
+      "cnyValue": "37870",
+      "changeFromPrevious": "3116"
+    },
+    {
+      "id": 32,
+      "assetId": 7,
+      "snapshotId": 3,
+      "cnyValue": "43789",
+      "changeFromPrevious": "5919"
+    },
+    {
+      "id": 33,
+      "assetId": 7,
+      "snapshotId": 4,
+      "cnyValue": "45186",
+      "changeFromPrevious": "1397"
+    },
+    {
+      "id": 34,
+      "assetId": 7,
+      "snapshotId": 5,
+      "cnyValue": "49132",
+      "changeFromPrevious": "3946"
+    },
+    {
+      "id": 35,
+      "assetId": 7,
+      "snapshotId": 6,
+      "cnyValue": "57896",
+      "changeFromPrevious": "8764"
+    },
+    {
+      "id": 36,
+      "assetId": 8,
+      "snapshotId": 1,
+      "cnyValue": "101929",
+      "changeFromPrevious": "0"
+    },
+    {
+      "id": 37,
+      "assetId": 8,
+      "snapshotId": 2,
+      "cnyValue": "98209",
+      "changeFromPrevious": "-3720"
+    },
+    {
+      "id": 38,
+      "assetId": 8,
+      "snapshotId": 3,
+      "cnyValue": "96183.7",
+      "changeFromPrevious": "-2025.3"
+    },
+    {
+      "id": 39,
+      "assetId": 8,
+      "snapshotId": 4,
+      "cnyValue": "65760.2",
+      "changeFromPrevious": "-30423.5"
+    },
+    {
+      "id": 40,
+      "assetId": 8,
+      "snapshotId": 5,
+      "cnyValue": "65241.9",
+      "changeFromPrevious": "-518.300000000003"
+    },
+    {
+      "id": 41,
+      "assetId": 8,
+      "snapshotId": 6,
+      "cnyValue": "66477.3",
+      "changeFromPrevious": "1235.4"
+    },
+    {
+      "id": 42,
+      "assetId": 9,
+      "snapshotId": 1,
+      "cnyValue": "56979.8",
+      "changeFromPrevious": "0"
+    },
+    {
+      "id": 43,
+      "assetId": 9,
+      "snapshotId": 2,
+      "cnyValue": "63818",
+      "changeFromPrevious": "6838.2"
+    },
+    {
+      "id": 44,
+      "assetId": 9,
+      "snapshotId": 3,
+      "cnyValue": "65781.5",
+      "changeFromPrevious": "1963.5"
+    },
+    {
+      "id": 45,
+      "assetId": 9,
+      "snapshotId": 4,
+      "cnyValue": "66129.4",
+      "changeFromPrevious": "347.899999999994"
+    },
+    {
+      "id": 46,
+      "assetId": 9,
+      "snapshotId": 5,
+      "cnyValue": "67670.1",
+      "changeFromPrevious": "1540.7"
+    },
+    {
+      "id": 47,
+      "assetId": 9,
+      "snapshotId": 6,
+      "cnyValue": "69686.5",
+      "changeFromPrevious": "2016.39999999999"
+    },
+    {
+      "id": 48,
+      "assetId": 10,
+      "snapshotId": 1,
+      "cnyValue": "5000",
+      "changeFromPrevious": "0"
+    },
+    {
+      "id": 49,
+      "assetId": 10,
+      "snapshotId": 2,
+      "cnyValue": "5100",
+      "changeFromPrevious": "100"
+    },
+    {
+      "id": 50,
+      "assetId": 10,
+      "snapshotId": 3,
+      "cnyValue": "5250",
+      "changeFromPrevious": "150"
+    },
+    {
+      "id": 51,
+      "assetId": 10,
+      "snapshotId": 4,
+      "cnyValue": "5250",
+      "changeFromPrevious": "0"
+    },
+    {
+      "id": 52,
+      "assetId": 10,
+      "snapshotId": 5,
+      "cnyValue": "4950",
+      "changeFromPrevious": "-300"
+    },
+    {
+      "id": 53,
+      "assetId": 10,
+      "snapshotId": 6,
+      "cnyValue": "5184",
+      "changeFromPrevious": "234"
+    },
+    {
+      "id": 54,
+      "assetId": 11,
+      "snapshotId": 1,
+      "cnyValue": "43775",
+      "changeFromPrevious": "0"
+    },
+    {
+      "id": 55,
+      "assetId": 11,
+      "snapshotId": 2,
+      "cnyValue": "44410",
+      "changeFromPrevious": "635"
+    },
+    {
+      "id": 56,
+      "assetId": 11,
+      "snapshotId": 3,
+      "cnyValue": "45050",
+      "changeFromPrevious": "640"
+    },
+    {
+      "id": 57,
+      "assetId": 11,
+      "snapshotId": 4,
+      "cnyValue": "45680",
+      "changeFromPrevious": "630"
+    },
+    {
+      "id": 58,
+      "assetId": 11,
+      "snapshotId": 5,
+      "cnyValue": "46180",
+      "changeFromPrevious": "500"
+    },
+    {
+      "id": 59,
+      "assetId": 11,
+      "snapshotId": 6,
+      "cnyValue": "47965",
+      "changeFromPrevious": "1785"
+    },
+    {
+      "id": 60,
+      "assetId": 12,
+      "snapshotId": 2,
+      "cnyValue": "1292",
+      "changeFromPrevious": "1292"
+    },
+    {
+      "id": 61,
+      "assetId": 12,
+      "snapshotId": 3,
+      "cnyValue": "5112",
+      "changeFromPrevious": "3820"
+    },
+    {
+      "id": 62,
+      "assetId": 12,
+      "snapshotId": 4,
+      "cnyValue": "19565",
+      "changeFromPrevious": "14453"
+    },
+    {
+      "id": 63,
+      "assetId": 12,
+      "snapshotId": 5,
+      "cnyValue": "18843",
+      "changeFromPrevious": "-722"
+    },
+    {
+      "id": 64,
+      "assetId": 12,
+      "snapshotId": 6,
+      "cnyValue": "20813",
+      "changeFromPrevious": "1970"
+    },
+    {
+      "id": 65,
+      "assetId": 13,
+      "snapshotId": 2,
+      "cnyValue": "1258",
+      "changeFromPrevious": "1258"
+    },
+    {
+      "id": 66,
+      "assetId": 13,
+      "snapshotId": 3,
+      "cnyValue": "4379",
+      "changeFromPrevious": "3121"
+    },
+    {
+      "id": 67,
+      "assetId": 13,
+      "snapshotId": 4,
+      "cnyValue": "11919",
+      "changeFromPrevious": "7540"
+    },
+    {
+      "id": 68,
+      "assetId": 13,
+      "snapshotId": 5,
+      "cnyValue": "11302",
+      "changeFromPrevious": "-617"
+    },
+    {
+      "id": 69,
+      "assetId": 13,
+      "snapshotId": 6,
+      "cnyValue": "12475",
+      "changeFromPrevious": "1173"
+    },
+    {
+      "id": 70,
+      "assetId": 14,
+      "snapshotId": 1,
+      "cnyValue": "63308",
+      "changeFromPrevious": "0"
+    },
+    {
+      "id": 71,
+      "assetId": 14,
+      "snapshotId": 2,
+      "cnyValue": "50988",
+      "changeFromPrevious": "-12320"
+    },
+    {
+      "id": 72,
+      "assetId": 15,
+      "snapshotId": 1,
+      "cnyValue": "34478",
+      "changeFromPrevious": "0"
+    },
+    {
+      "id": 73,
+      "assetId": 15,
+      "snapshotId": 2,
+      "cnyValue": "56695",
+      "changeFromPrevious": "22217"
+    },
+    {
+      "id": 74,
+      "assetId": 15,
+      "snapshotId": 3,
+      "cnyValue": "56725",
+      "changeFromPrevious": "30"
+    },
+    {
+      "id": 75,
+      "assetId": 15,
+      "snapshotId": 4,
+      "cnyValue": "56725",
+      "changeFromPrevious": "0"
+    },
+    {
+      "id": 76,
+      "assetId": 15,
+      "snapshotId": 5,
+      "cnyValue": "6725",
+      "changeFromPrevious": "-50000"
+    },
+    {
+      "id": 77,
+      "assetId": 15,
+      "snapshotId": 6,
+      "cnyValue": "11538",
+      "changeFromPrevious": "4813"
+    },
+    {
+      "id": 78,
+      "assetId": 16,
+      "snapshotId": 1,
+      "cnyValue": "81846",
+      "changeFromPrevious": "0"
+    },
+    {
+      "id": 79,
+      "assetId": 16,
+      "snapshotId": 2,
+      "cnyValue": "23357",
+      "changeFromPrevious": "-58489"
+    },
+    {
+      "id": 80,
+      "assetId": 16,
+      "snapshotId": 3,
+      "cnyValue": "24700.9",
+      "changeFromPrevious": "1343.9"
+    },
+    {
+      "id": 81,
+      "assetId": 16,
+      "snapshotId": 4,
+      "cnyValue": "143526.5",
+      "changeFromPrevious": "118825.6"
+    },
+    {
+      "id": 82,
+      "assetId": 16,
+      "snapshotId": 5,
+      "cnyValue": "183847.4",
+      "changeFromPrevious": "40320.9"
+    },
+    {
+      "id": 83,
+      "assetId": 16,
+      "snapshotId": 6,
+      "cnyValue": "65398.1",
+      "changeFromPrevious": "-118449.3"
+    },
+    {
+      "id": 84,
+      "assetId": 17,
+      "snapshotId": 1,
+      "cnyValue": "248795",
+      "changeFromPrevious": "0"
+    },
+    {
+      "id": 85,
+      "assetId": 17,
+      "snapshotId": 2,
+      "cnyValue": "246602",
+      "changeFromPrevious": "-2193"
+    },
+    {
+      "id": 86,
+      "assetId": 17,
+      "snapshotId": 3,
+      "cnyValue": "246439.83",
+      "changeFromPrevious": "-162.169999999984"
+    },
+    {
+      "id": 87,
+      "assetId": 17,
+      "snapshotId": 4,
+      "cnyValue": "160131.79",
+      "changeFromPrevious": "-86308.04"
+    },
+    {
+      "id": 88,
+      "assetId": 17,
+      "snapshotId": 5,
+      "cnyValue": "160249.18",
+      "changeFromPrevious": "117.389999999985"
+    },
+    {
+      "id": 89,
+      "assetId": 17,
+      "snapshotId": 6,
+      "cnyValue": "160484.87",
+      "changeFromPrevious": "235.690000000002"
+    },
+    {
+      "id": 90,
+      "assetId": 18,
+      "snapshotId": 1,
+      "cnyValue": "8000",
+      "changeFromPrevious": "0"
+    },
+    {
+      "id": 91,
+      "assetId": 18,
+      "snapshotId": 2,
+      "cnyValue": "8000",
+      "changeFromPrevious": "0"
+    },
+    {
+      "id": 92,
+      "assetId": 18,
+      "snapshotId": 3,
+      "cnyValue": "37539",
+      "changeFromPrevious": "29539"
+    },
+    {
+      "id": 93,
+      "assetId": 18,
+      "snapshotId": 4,
+      "cnyValue": "17558",
+      "changeFromPrevious": "-19981"
+    },
+    {
+      "id": 94,
+      "assetId": 18,
+      "snapshotId": 5,
+      "cnyValue": "14358",
+      "changeFromPrevious": "-3200"
+    },
+    {
+      "id": 95,
+      "assetId": 18,
+      "snapshotId": 6,
+      "cnyValue": "7959",
+      "changeFromPrevious": "-6399"
+    },
+    {
+      "id": 96,
+      "assetId": 19,
+      "snapshotId": 3,
+      "cnyValue": "14831",
+      "changeFromPrevious": "14831"
+    },
+    {
+      "id": 97,
+      "assetId": 19,
+      "snapshotId": 4,
+      "cnyValue": "657",
+      "changeFromPrevious": "-14174"
+    },
+    {
+      "id": 98,
+      "assetId": 19,
+      "snapshotId": 5,
+      "cnyValue": "654",
+      "changeFromPrevious": "-3"
+    },
+    {
+      "id": 99,
+      "assetId": 19,
+      "snapshotId": 6,
+      "cnyValue": "14688",
+      "changeFromPrevious": "14034"
+    }
+  ],
+  "cashFlows": [],
+  "exchangeRates": [
+    {
+      "id": 1,
+      "fromCurrency": "USD",
+      "toCurrency": "CNY",
+      "rate": "7.1",
+      "effectiveDate": "2026-01-07T15:22:51.746Z"
+    },
+    {
+      "id": 2,
+      "fromCurrency": "HKD",
+      "toCurrency": "CNY",
+      "rate": "0.91",
+      "effectiveDate": "2026-01-07T15:22:51.747Z"
+    }
+  ],
+  "portfolioSummary": [
+    {
+      "id": 1,
+      "snapshotId": 1,
+      "totalValue": "1073655.8"
+    },
+    {
+      "id": 2,
+      "snapshotId": 2,
+      "totalValue": "1070879"
+    },
+    {
+      "id": 3,
+      "snapshotId": 3,
+      "totalValue": "1076292.33"
+    },
+    {
+      "id": 4,
+      "snapshotId": 4,
+      "totalValue": "1066499.89"
+    },
+    {
+      "id": 5,
+      "snapshotId": 5,
+      "totalValue": "1059745.08"
+    },
+    {
+      "id": 6,
+      "snapshotId": 6,
+      "totalValue": "977822.77"
+    }
+  ],
+  "nextIds": {
+    "categories": 8,
+    "assets": 20,
+    "snapshots": 7,
+    "assetValues": 100,
+    "cashFlows": 1,
+    "exchangeRates": 3,
+    "portfolioSummary": 7
+  }
+}
