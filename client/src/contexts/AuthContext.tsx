@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (password: string): Promise<boolean> => {
     // Simple password check - in production this would be a server call
-    const correctPassword = "portfolio2026";
+    const correctPassword = "tong2026";
     
     if (password === correctPassword) {
       const expiryTime = Date.now() + EXPIRY_HOURS * 60 * 60 * 1000;
