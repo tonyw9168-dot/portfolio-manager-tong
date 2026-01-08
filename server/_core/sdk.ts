@@ -84,11 +84,13 @@ const createOAuthHttpClient = (): AxiosInstance =>
 
 class SDKServer {
   private readonly client: AxiosInstance;
-  private readonly oauthService: OAuthService;
+  private readonly oauthService: OAuthService | null;
+  private readonly isOAuthEnabled: boolean;
 
   constructor(client: AxiosInstance = createOAuthHttpClient()) {
     this.client = client;
-    this.oauthService = new OAuthService(this.client);
+    this.isOAuthEnabled = !!ENV.oAuthServerUrl;
+    this.oauthService = this.isOAuthEnabled ? new OAuthService(this.client) : null;
   }
 
   private deriveLoginMethod(
@@ -257,7 +259,39 @@ class SDKServer {
   }
 
   async authenticateRequest(req: Request): Promise<User> {
-    // Regular authentication flow
+    // If OAuth is not enabled, use local authentication
+    if (!this.isOAuthEnabled) {
+      const cookies = this.parseCookies(req.headers.cookie);
+      const sessionCookie = cookies.get(COOKIE_NAME);
+      
+      // For local mode, use a default user
+      const defaultOpenId = "local-user";
+      let user = await db.getUserByOpenId(defaultOpenId);
+      
+      if (!user) {
+        await db.upsertUser({
+          openId: defaultOpenId,
+          name: "Local User",
+          email: null,
+          loginMethod: "local",
+          lastSignedIn: new Date(),
+        });
+        user = await db.getUserByOpenId(defaultOpenId);
+      }
+      
+      if (!user) {
+        throw ForbiddenError("Failed to create local user");
+      }
+      
+      await db.upsertUser({
+        openId: user.openId,
+        lastSignedIn: new Date(),
+      });
+      
+      return user;
+    }
+    
+    // Regular OAuth authentication flow
     const cookies = this.parseCookies(req.headers.cookie);
     const sessionCookie = cookies.get(COOKIE_NAME);
     const session = await this.verifySession(sessionCookie);
