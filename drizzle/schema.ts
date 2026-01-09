@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, date } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, date, boolean } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -127,3 +127,66 @@ export const portfolioSummary = mysqlTable("portfolio_summary", {
 
 export type PortfolioSummary = typeof portfolioSummary.$inferSelect;
 export type InsertPortfolioSummary = typeof portfolioSummary.$inferInsert;
+
+// ==================== 家庭保险相关表 ====================
+
+/**
+ * Family Members - 家庭成员
+ */
+export const familyMembers = mysqlTable("family_members", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 64 }).notNull(), // 姓名
+  role: varchar("role", { length: 32 }).notNull(), // 家庭角色：户主、配偶、子女、父母等
+  relationship: varchar("relationship", { length: 32 }), // 与户主关系：本人、配偶、子女、父母等
+  birthDate: date("birthDate"), // 出生日期
+  age: int("age"), // 年龄
+  sortOrder: int("sortOrder").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type FamilyMember = typeof familyMembers.$inferSelect;
+export type InsertFamilyMember = typeof familyMembers.$inferInsert;
+
+/**
+ * Insurance Policies - 保险保单
+ */
+export const insurancePolicies = mysqlTable("insurance_policies", {
+  id: int("id").autoincrement().primaryKey(),
+  // 基本信息
+  name: varchar("name", { length: 256 }).notNull(), // 保险产品名称
+  company: varchar("company", { length: 128 }).notNull(), // 保险公司
+  insuranceType: varchar("insuranceType", { length: 32 }).notNull(), // 险种类型：医疗险、重疾险、寿险、意外险、储蓄险、年金险
+  
+  // 人员信息
+  insuredMemberId: int("insuredMemberId").notNull(), // 被保人ID
+  policyholderMemberId: int("policyholderMemberId"), // 投保人ID
+  
+  // 保额和保费
+  coverageAmount: decimal("coverageAmount", { precision: 18, scale: 2 }), // 保额
+  coverageAmountText: varchar("coverageAmountText", { length: 64 }), // 保额文字描述（如"储蓄型/未知"）
+  annualPremium: decimal("annualPremium", { precision: 18, scale: 2 }), // 年缴保费
+  currency: varchar("currency", { length: 8 }).default("CNY").notNull(), // 货币类型
+  
+  // 时间信息
+  effectiveDate: date("effectiveDate"), // 生效日期
+  expiryDate: date("expiryDate"), // 到期日期
+  coveragePeriod: varchar("coveragePeriod", { length: 32 }), // 保障期限：1年、终身等
+  paymentMethod: varchar("paymentMethod", { length: 32 }), // 缴费方式：年缴、月缴、趸交等
+  
+  // 保障内容
+  coverageDetails: text("coverageDetails"), // 保障内容（JSON格式存储多项内容）
+  claimConditions: text("claimConditions"), // 赔付条件
+  
+  // 状态
+  status: varchar("status", { length: 16 }).default("active").notNull(), // 状态：active生效中、expired已过期、pending待生效
+  
+  // 备注
+  notes: text("notes"), // 备注
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type InsurancePolicy = typeof insurancePolicies.$inferSelect;
+export type InsertInsurancePolicy = typeof insurancePolicies.$inferInsert;
