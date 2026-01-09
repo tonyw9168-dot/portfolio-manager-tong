@@ -1,7 +1,14 @@
-import { useMemo, useState, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { 
   TrendingUp, 
@@ -11,7 +18,7 @@ import {
   Upload,
   Download,
   RefreshCw,
-  Percent
+  DollarSign
 } from "lucide-react";
 import {
   PieChart,
@@ -39,9 +46,24 @@ const COLORS = [
   "hsl(280, 65%, 60%)",  // Pink
 ];
 
-function formatCurrency(value: number | string): string {
+// 汇率配置
+const EXCHANGE_RATE_USD = 7.25;
+
+type CurrencyDisplay = "CNY" | "USD";
+
+function formatCurrency(value: number | string, currency: CurrencyDisplay = "CNY"): string {
   const num = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(num)) return "¥0.00";
+  if (isNaN(num)) return currency === "CNY" ? "¥0.00" : "$0.00";
+  
+  if (currency === "USD") {
+    const usdValue = num / EXCHANGE_RATE_USD;
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+    }).format(usdValue);
+  }
+  
   return new Intl.NumberFormat("zh-CN", {
     style: "currency",
     currency: "CNY",
@@ -49,11 +71,19 @@ function formatCurrency(value: number | string): string {
   }).format(num);
 }
 
-function formatCompactCurrency(value: number): string {
+function formatCompactCurrency(value: number, currency: CurrencyDisplay = "CNY"): string {
+  if (currency === "USD") {
+    const usdValue = value / EXCHANGE_RATE_USD;
+    if (usdValue >= 10000) {
+      return `$${(usdValue / 10000).toFixed(1)}万`;
+    }
+    return formatCurrency(value, currency);
+  }
+  
   if (value >= 10000) {
     return `¥${(value / 10000).toFixed(1)}万`;
   }
-  return formatCurrency(value);
+  return formatCurrency(value, currency);
 }
 
 function formatROI(roi: number): string {
@@ -63,6 +93,7 @@ function formatROI(roi: number): string {
 
 export default function Dashboard() {
   const [isImporting, setIsImporting] = useState(false);
+  const [displayCurrency, setDisplayCurrency] = useState<CurrencyDisplay>("CNY");
   
   const { data: dashboardData, isLoading, refetch } = trpc.dashboard.overview.useQuery();
   const importMutation = trpc.import.excel.useMutation();
@@ -186,7 +217,19 @@ export default function Dashboard() {
                 : "暂无数据"}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            {/* 货币切换 */}
+            <Select value={displayCurrency} onValueChange={(v) => setDisplayCurrency(v as CurrencyDisplay)}>
+              <SelectTrigger className="w-[120px]">
+                <DollarSign className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="币种" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="CNY">人民币 ¥</SelectItem>
+                <SelectItem value="USD">美元 $</SelectItem>
+              </SelectContent>
+            </Select>
+            
             <Button 
               variant="outline" 
               size="sm" 
@@ -219,6 +262,13 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* 货币提示 */}
+        {displayCurrency === "USD" && (
+          <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+            当前以美元显示，汇率：1 USD = {EXCHANGE_RATE_USD} CNY（仅供参考）
+          </div>
+        )}
+
         {!hasData ? (
           /* Empty State */
           <Card className="border-dashed">
@@ -245,7 +295,7 @@ export default function Dashboard() {
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">总资产</p>
-                      <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
+                      <p className="text-2xl font-bold">{formatCurrency(totalValue, displayCurrency)}</p>
                       {dashboardData?.overallRoi !== undefined && (
                         <p className={`text-sm mt-2 font-semibold ${
                           dashboardData.overallRoi >= 0 ? 'text-green-600' : 'text-red-600'
@@ -267,7 +317,7 @@ export default function Dashboard() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">本期盈亏</p>
                       <p className={`text-2xl font-bold ${latestChange >= 0 ? "number-positive" : "number-negative"}`}>
-                        {latestChange >= 0 ? "+" : ""}{formatCurrency(latestChange)}
+                        {latestChange >= 0 ? "+" : ""}{formatCurrency(latestChange, displayCurrency)}
                       </p>
                     </div>
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
@@ -345,7 +395,7 @@ export default function Dashboard() {
                           ))}
                         </Pie>
                         <Tooltip 
-                          formatter={(value: number) => formatCurrency(value)}
+                          formatter={(value: number) => formatCurrency(value, displayCurrency)}
                           contentStyle={{
                             backgroundColor: "white",
                             border: "1px solid #e5e7eb",
@@ -371,7 +421,7 @@ export default function Dashboard() {
                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                         <XAxis 
                           type="number" 
-                          tickFormatter={(value) => formatCompactCurrency(value)}
+                          tickFormatter={(value) => formatCompactCurrency(value, displayCurrency)}
                           stroke="#888"
                         />
                         <YAxis 
@@ -382,7 +432,7 @@ export default function Dashboard() {
                           tick={{ fontSize: 12 }}
                         />
                         <Tooltip 
-                          formatter={(value: number) => formatCurrency(value)}
+                          formatter={(value: number) => formatCurrency(value, displayCurrency)}
                           contentStyle={{
                             backgroundColor: "white",
                             border: "1px solid #e5e7eb",
@@ -418,13 +468,13 @@ export default function Dashboard() {
                         tick={{ fontSize: 12 }}
                       />
                       <YAxis 
-                        tickFormatter={(value) => formatCompactCurrency(value)}
+                        tickFormatter={(value) => formatCompactCurrency(value, displayCurrency)}
                         stroke="#888"
                         tick={{ fontSize: 12 }}
                       />
                       <Tooltip 
                         formatter={(value: number, name: string) => [
-                          formatCurrency(value),
+                          formatCurrency(value, displayCurrency),
                           name === "value" ? "总资产" : "变动"
                         ]}
                         contentStyle={{
