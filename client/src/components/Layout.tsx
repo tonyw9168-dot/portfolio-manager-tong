@@ -13,7 +13,8 @@ import {
   FileText,
   Target,
   History,
-  Sparkles
+  Sparkles,
+  Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -35,6 +36,7 @@ const navItems = [
   { href: "/targets", label: "目标配置", icon: Target, mobileLabel: "目标" },
   { href: "/forecast", label: "走势预测", icon: Sparkles, mobileLabel: "预测" },
   { href: "/cashflow", label: "现金流量", icon: ArrowLeftRight, mobileLabel: "流量" },
+  { href: "/insurance", label: "家庭保险", icon: Shield, mobileLabel: "保险" },
   { href: "/settings", label: "设置", icon: Settings, mobileLabel: "设置" },
 ];
 
@@ -42,8 +44,8 @@ const navItems = [
 const mobileNavItems = [
   { href: "/", label: "概览", icon: LayoutDashboard },
   { href: "/holdings", label: "持仓", icon: Wallet },
+  { href: "/insurance", label: "保险", icon: Shield },
   { href: "/analysis", label: "分析", icon: BarChart3 },
-  { href: "/history", label: "历史", icon: History },
   { href: "/settings", label: "更多", icon: Menu },
 ];
 
@@ -188,7 +190,7 @@ export default function Layout({ children }: LayoutProps) {
         <div className="flex items-center justify-around px-2 py-1">
           {mobileNavItems.map((item) => {
             const isActive = item.href === "/settings" 
-              ? ["/settings", "/cashflow", "/summary", "/targets"].includes(location)
+              ? ["/settings", "/cashflow", "/summary", "/targets", "/history"].includes(location)
               : location === item.href;
             
             if (item.href === "/settings") {
