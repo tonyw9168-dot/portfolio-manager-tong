@@ -16,10 +16,13 @@ import Targets from "./pages/Targets";
 import ProfitLossDetail from "./pages/ProfitLossDetail";
 import PerformanceReport from "./pages/PerformanceReport";
 import Forecast from "./pages/Forecast";
+import Insurance from "./pages/Insurance";
 import { AuthProvider, useAuthContext } from "./contexts/AuthContext";
+
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuthContext();
+
 
   if (isLoading) {
     return (
@@ -29,12 +32,15 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     );
   }
 
+
   if (!isAuthenticated) {
     return <Login />;
   }
 
+
   return <Component />;
 }
+
 
 function Router() {
   return (
@@ -49,6 +55,7 @@ function Router() {
       <Route path="/targets" component={() => <ProtectedRoute component={Targets} />} />
       <Route path="/forecast" component={() => <ProtectedRoute component={Forecast} />} />
       <Route path="/cashflow" component={() => <ProtectedRoute component={CashFlow} />} />
+      <Route path="/insurance" component={() => <ProtectedRoute component={Insurance} />} />
       <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
       <Route path="/login" component={Login} />
       <Route path="/404" component={NotFound} />
@@ -56,6 +63,7 @@ function Router() {
     </Switch>
   );
 }
+
 
 function App() {
   return (
@@ -71,5 +79,6 @@ function App() {
     </ErrorBoundary>
   );
 }
+
 
 export default App;
