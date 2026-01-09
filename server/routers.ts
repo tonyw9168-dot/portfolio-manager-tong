@@ -6,7 +6,7 @@ import { z } from "zod";
 import * as XLSX from "xlsx";
 import {
   getAllCategories, upsertCategory, getCategoryByName,
-  getAllAssets, getAssetsByCategory, upsertAsset, getAssetByNameAndCategory,
+  getAllAssets, getAssetsByCategory, upsertAsset, getAssetByNameAndCategory, getAssetById, deleteAsset, updateAsset,
   getAllSnapshots, upsertSnapshot, getSnapshotByLabel,
   getAssetValues, upsertAssetValue,
   getAllCashFlows, addCashFlow, deleteCashFlow,
@@ -57,6 +57,54 @@ export const appRouter = router({
       .input(z.object({ categoryId: z.number() }))
       .query(async ({ input }) => {
         return getAssetsByCategory(input.categoryId);
+      }),
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return getAssetById(input.id);
+      }),
+    create: publicProcedure
+      .input(z.object({
+        assetName: z.string(),
+        categoryId: z.number().optional(),
+        cnyValue: z.number().optional(),
+        originalValue: z.number().optional(),
+        originalCurrency: z.string().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const assetId = await upsertAsset({
+          name: input.assetName,
+          categoryId: input.categoryId || 1,
+          currency: input.originalCurrency || 'CNY',
+          sortOrder: 0,
+        });
+        return { success: true, id: assetId };
+      }),
+    update: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        assetName: z.string().optional(),
+        categoryId: z.number().optional(),
+        cnyValue: z.number().optional(),
+        originalValue: z.number().optional(),
+        originalCurrency: z.string().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, assetName, categoryId, originalCurrency } = input;
+        await updateAsset(id, {
+          name: assetName,
+          categoryId: categoryId,
+          currency: originalCurrency,
+        });
+        return { success: true };
+      }),
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteAsset(input.id);
+        return { success: true };
       }),
   }),
 
