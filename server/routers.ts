@@ -12,7 +12,11 @@ import {
   getAllCashFlows, addCashFlow, deleteCashFlow,
   getAllExchangeRates, getLatestExchangeRate, upsertExchangeRate,
   getAllPortfolioSummaries, upsertPortfolioSummary,
-  clearAllData
+  clearAllData,
+  // Insurance related functions
+  getAllFamilyMembers, getFamilyMemberById, addFamilyMember, updateFamilyMember, deleteFamilyMember,
+  getAllInsurancePolicies, getInsurancePolicyById, getInsurancePoliciesByMember, getInsurancePoliciesByType,
+  addInsurancePolicy, updateInsurancePolicy, deleteInsurancePolicy
 } from "./db";
 
 // Password for access control
@@ -469,6 +473,320 @@ export const appRouter = router({
         overallRoi: parseFloat(overallRoi.toFixed(2)),
       };
     }),
+  }),
+
+  // ==================== 家庭保险相关API ====================
+  
+  // Family Members
+  familyMembers: router({
+    list: publicProcedure.query(async () => {
+      return getAllFamilyMembers();
+    }),
+    get: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return getFamilyMemberById(input.id);
+      }),
+    add: publicProcedure
+      .input(z.object({
+        name: z.string(),
+        role: z.string(),
+        relationship: z.string().optional(),
+        birthDate: z.string().optional(),
+        age: z.number().optional(),
+        sortOrder: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await addFamilyMember({
+          name: input.name,
+          role: input.role,
+          relationship: input.relationship,
+          birthDate: input.birthDate ? new Date(input.birthDate) : undefined,
+          age: input.age,
+          sortOrder: input.sortOrder || 0,
+        });
+        return { success: true, id };
+      }),
+    update: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        role: z.string().optional(),
+        relationship: z.string().optional(),
+        birthDate: z.string().optional(),
+        age: z.number().optional(),
+        sortOrder: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        await updateFamilyMember(input.id, {
+          name: input.name,
+          role: input.role,
+          relationship: input.relationship,
+          birthDate: input.birthDate ? new Date(input.birthDate) : undefined,
+          age: input.age,
+          sortOrder: input.sortOrder,
+        });
+        return { success: true };
+      }),
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteFamilyMember(input.id);
+        return { success: true };
+      }),
+  }),
+
+  // Insurance Policies
+  insurance: router({
+    list: publicProcedure.query(async () => {
+      return getAllInsurancePolicies();
+    }),
+    get: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return getInsurancePolicyById(input.id);
+      }),
+    byMember: publicProcedure
+      .input(z.object({ memberId: z.number() }))
+      .query(async ({ input }) => {
+        return getInsurancePoliciesByMember(input.memberId);
+      }),
+    byType: publicProcedure
+      .input(z.object({ insuranceType: z.string() }))
+      .query(async ({ input }) => {
+        return getInsurancePoliciesByType(input.insuranceType);
+      }),
+    add: publicProcedure
+      .input(z.object({
+        name: z.string(),
+        company: z.string(),
+        insuranceType: z.string(),
+        insuredMemberId: z.number(),
+        policyholderMemberId: z.number().optional(),
+        coverageAmount: z.string().optional(),
+        coverageAmountText: z.string().optional(),
+        annualPremium: z.string().optional(),
+        currency: z.string().default("CNY"),
+        effectiveDate: z.string().optional(),
+        expiryDate: z.string().optional(),
+        coveragePeriod: z.string().optional(),
+        paymentMethod: z.string().optional(),
+        coverageDetails: z.string().optional(),
+        claimConditions: z.string().optional(),
+        status: z.string().default("active"),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await addInsurancePolicy({
+          name: input.name,
+          company: input.company,
+          insuranceType: input.insuranceType,
+          insuredMemberId: input.insuredMemberId,
+          policyholderMemberId: input.policyholderMemberId,
+          coverageAmount: input.coverageAmount,
+          coverageAmountText: input.coverageAmountText,
+          annualPremium: input.annualPremium,
+          currency: input.currency,
+          effectiveDate: input.effectiveDate ? new Date(input.effectiveDate) : undefined,
+          expiryDate: input.expiryDate ? new Date(input.expiryDate) : undefined,
+          coveragePeriod: input.coveragePeriod,
+          paymentMethod: input.paymentMethod,
+          coverageDetails: input.coverageDetails,
+          claimConditions: input.claimConditions,
+          status: input.status,
+          notes: input.notes,
+        });
+        return { success: true, id };
+      }),
+    update: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        company: z.string().optional(),
+        insuranceType: z.string().optional(),
+        insuredMemberId: z.number().optional(),
+        policyholderMemberId: z.number().optional(),
+        coverageAmount: z.string().optional(),
+        coverageAmountText: z.string().optional(),
+        annualPremium: z.string().optional(),
+        currency: z.string().optional(),
+        effectiveDate: z.string().optional(),
+        expiryDate: z.string().optional(),
+        coveragePeriod: z.string().optional(),
+        paymentMethod: z.string().optional(),
+        coverageDetails: z.string().optional(),
+        claimConditions: z.string().optional(),
+        status: z.string().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        await updateInsurancePolicy(input.id, {
+          name: input.name,
+          company: input.company,
+          insuranceType: input.insuranceType,
+          insuredMemberId: input.insuredMemberId,
+          policyholderMemberId: input.policyholderMemberId,
+          coverageAmount: input.coverageAmount,
+          coverageAmountText: input.coverageAmountText,
+          annualPremium: input.annualPremium,
+          currency: input.currency,
+          effectiveDate: input.effectiveDate ? new Date(input.effectiveDate) : undefined,
+          expiryDate: input.expiryDate ? new Date(input.expiryDate) : undefined,
+          coveragePeriod: input.coveragePeriod,
+          paymentMethod: input.paymentMethod,
+          coverageDetails: input.coverageDetails,
+          claimConditions: input.claimConditions,
+          status: input.status,
+          notes: input.notes,
+        });
+        return { success: true };
+      }),
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteInsurancePolicy(input.id);
+        return { success: true };
+      }),
+    
+    // Export insurance data to Excel
+    exportExcel: publicProcedure.query(async () => {
+      const members = await getAllFamilyMembers();
+      const policies = await getAllInsurancePolicies();
+
+      // Create member map
+      const memberMap: Record<number, string> = {};
+      for (const m of members) {
+        memberMap[m.id] = m.name;
+      }
+
+      // Build export data
+      const headers = [
+        "保险名称", "保险公司", "险种类型", "被保人", "投保人",
+        "保额", "保额说明", "年缴保费", "币种", "生效日期", "到期日期",
+        "保障期限", "缴费方式", "保障内容", "赔付条件", "状态", "备注"
+      ];
+
+      const rows: any[][] = [headers];
+
+      for (const policy of policies) {
+        rows.push([
+          policy.name,
+          policy.company,
+          policy.insuranceType,
+          memberMap[policy.insuredMemberId] || "",
+          policy.policyholderMemberId ? memberMap[policy.policyholderMemberId] : "",
+          policy.coverageAmount || "",
+          policy.coverageAmountText || "",
+          policy.annualPremium || "",
+          policy.currency,
+          policy.effectiveDate || "",
+          policy.expiryDate || "",
+          policy.coveragePeriod || "",
+          policy.paymentMethod || "",
+          policy.coverageDetails || "",
+          policy.claimConditions || "",
+          policy.status,
+          policy.notes || "",
+        ]);
+      }
+
+      // Create workbook
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "家庭保险");
+
+      // Add family members sheet
+      const memberHeaders = ["姓名", "家庭角色", "与户主关系", "出生日期", "年龄"];
+      const memberRows: any[][] = [memberHeaders];
+      for (const m of members) {
+        memberRows.push([m.name, m.role, m.relationship || "", m.birthDate || "", m.age || ""]);
+      }
+      const memberWs = XLSX.utils.aoa_to_sheet(memberRows);
+      XLSX.utils.book_append_sheet(wb, memberWs, "家庭成员");
+
+      // Generate base64
+      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      const base64 = Buffer.from(buffer).toString("base64");
+
+      return { data: base64, filename: `insurance_${new Date().toISOString().split("T")[0]}.xlsx` };
+    }),
+
+    // Import insurance data from Excel
+    importExcel: publicProcedure
+      .input(z.object({ data: z.string() }))
+      .mutation(async ({ input }) => {
+        try {
+          const buffer = Buffer.from(input.data, "base64");
+          const workbook = XLSX.read(buffer, { type: "buffer" });
+
+          // Import family members first
+          const memberSheet = workbook.Sheets["家庭成员"];
+          if (memberSheet) {
+            const memberData = XLSX.utils.sheet_to_json(memberSheet, { header: 1 }) as any[][];
+            for (let i = 1; i < memberData.length; i++) {
+              const row = memberData[i];
+              if (!row || !row[0]) continue;
+              await addFamilyMember({
+                name: row[0]?.toString() || "",
+                role: row[1]?.toString() || "",
+                relationship: row[2]?.toString() || undefined,
+                birthDate: row[3] ? new Date(row[3]) : undefined,
+                age: row[4] ? parseInt(row[4]) : undefined,
+                sortOrder: i,
+              });
+            }
+          }
+
+          // Get updated member list
+          const members = await getAllFamilyMembers();
+          const memberNameMap: Record<string, number> = {};
+          for (const m of members) {
+            memberNameMap[m.name] = m.id;
+          }
+
+          // Import insurance policies
+          const insuranceSheet = workbook.Sheets["家庭保险"];
+          if (insuranceSheet) {
+            const insuranceData = XLSX.utils.sheet_to_json(insuranceSheet, { header: 1 }) as any[][];
+            for (let i = 1; i < insuranceData.length; i++) {
+              const row = insuranceData[i];
+              if (!row || !row[0]) continue;
+
+              const insuredName = row[3]?.toString() || "";
+              const policyholderName = row[4]?.toString() || "";
+              const insuredMemberId = memberNameMap[insuredName];
+              const policyholderMemberId = policyholderName ? memberNameMap[policyholderName] : undefined;
+
+              if (!insuredMemberId) continue;
+
+              await addInsurancePolicy({
+                name: row[0]?.toString() || "",
+                company: row[1]?.toString() || "",
+                insuranceType: row[2]?.toString() || "",
+                insuredMemberId,
+                policyholderMemberId,
+                coverageAmount: row[5]?.toString() || undefined,
+                coverageAmountText: row[6]?.toString() || undefined,
+                annualPremium: row[7]?.toString() || undefined,
+                currency: row[8]?.toString() || "CNY",
+                effectiveDate: row[9] ? new Date(row[9]) : undefined,
+                expiryDate: row[10] ? new Date(row[10]) : undefined,
+                coveragePeriod: row[11]?.toString() || undefined,
+                paymentMethod: row[12]?.toString() || undefined,
+                coverageDetails: row[13]?.toString() || undefined,
+                claimConditions: row[14]?.toString() || undefined,
+                status: row[15]?.toString() || "active",
+                notes: row[16]?.toString() || undefined,
+              });
+            }
+          }
+
+          return { success: true, message: "保险数据导入成功" };
+        } catch (error) {
+          console.error("Import insurance error:", error);
+          return { success: false, message: `导入失败: ${error}` };
+        }
+      }),
   }),
 });
 
