@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Shield, Users, Heart, Umbrella, TrendingUp, AlertTriangle, Calendar, Plus, Edit, Trash2, Download, Upload, FileSpreadsheet, Building, User, DollarSign, Clock, FileText } from "lucide-react";
+import { Shield, Users, Heart, Umbrella, TrendingUp, AlertTriangle, Calendar, Plus, Edit, Trash2, Download, Upload, FileSpreadsheet, Building, User, DollarSign, Clock, FileText, Home, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
 
@@ -393,6 +394,14 @@ export default function Insurance() {
           <p className="text-muted-foreground mt-1">全面了解家庭保险覆盖情况，识别风险缺口</p>
         </div>
         <div className="flex gap-2">
+          {/* Back to home button */}
+          <Link href="/">
+            <Button variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              返回主页
+            </Button>
+          </Link>
+          
           {/* Import button */}
           <label>
             <input type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
