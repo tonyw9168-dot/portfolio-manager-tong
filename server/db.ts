@@ -329,6 +329,45 @@ export async function getAssetByNameAndCategory(name: string, categoryId: number
   return localData.assets.find(a => a.name === name && a.categoryId === categoryId);
 }
 
+export async function getAssetById(id: number) {
+  const db = await getDb();
+  if (db) {
+    const result = await db.select().from(assets).where(eq(assets.id, id)).limit(1);
+    return result[0];
+  }
+  // Use local storage
+  return localData.assets.find(a => a.id === id);
+}
+
+export async function deleteAsset(id: number) {
+  const db = await getDb();
+  if (db) {
+    // First delete related asset values
+    await db.delete(assetValues).where(eq(assetValues.assetId, id));
+    // Then delete the asset
+    await db.delete(assets).where(eq(assets.id, id));
+    return;
+  }
+  // Use local storage
+  localData.assetValues = localData.assetValues.filter(av => av.assetId !== id);
+  localData.assets = localData.assets.filter(a => a.id !== id);
+  saveLocalData();
+}
+
+export async function updateAsset(id: number, data: Partial<InsertAsset>) {
+  const db = await getDb();
+  if (db) {
+    await db.update(assets).set(data).where(eq(assets.id, id));
+    return;
+  }
+  // Use local storage
+  const asset = localData.assets.find(a => a.id === id);
+  if (asset) {
+    Object.assign(asset, data);
+    saveLocalData();
+  }
+}
+
 // ============ Snapshot Functions ============
 export async function getAllSnapshots() {
   const db = await getDb();
