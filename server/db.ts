@@ -1,4 +1,4 @@
-import { eq, and, desc, asc } from "drizzle-orm";
+import { eq, and, asc, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, users,
@@ -8,7 +8,9 @@ import {
   assetValues, InsertAssetValue,
   cashFlows, InsertCashFlow,
   exchangeRates, InsertExchangeRate,
-  portfolioSummary, InsertPortfolioSummary
+  portfolioSummary, InsertPortfolioSummary,
+  familyMembers, InsertFamilyMember,
+  insurancePolicies, InsertInsurancePolicy
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import * as fs from 'fs';
@@ -22,10 +24,41 @@ interface LocalData {
   assets: Array<{ id: number; categoryId: number; name: string; currency: string; suggestedRatio?: string; sortOrder: number }>;
   snapshots: Array<{ id: number; snapshotDate: Date; label: string }>;
   assetValues: Array<{ id: number; assetId: number; snapshotId: number; originalValue?: string; cnyValue: string; changeFromPrevious?: string; currentRatio?: string }>;
-  cashFlows: Array<{ id: number; flowDate: Date; flowType: string; amount: string; currency: string; description?: string }>;
+  cashFlows: Array<{ id: number; flowDate: Date; flowType: string; amount: string; currency: string; description?: string; sourceAccount?: string; targetAccount?: string; assetName?: string; originalAmount: string; cnyAmount: string }>;
   exchangeRates: Array<{ id: number; fromCurrency: string; toCurrency: string; rate: string; effectiveDate: Date }>;
   portfolioSummary: Array<{ id: number; snapshotId: number; totalValue: string; changeFromPrevious?: string; changeFromTwoPrevious?: string }>;
-  nextIds: { categories: number; assets: number; snapshots: number; assetValues: number; cashFlows: number; exchangeRates: number; portfolioSummary: number };
+  familyMembers: Array<{ id: number; name: string; role: string; relationship?: string; birthDate?: Date; age?: number; sortOrder: number }>;
+  insurancePolicies: Array<{
+    id: number;
+    name: string;
+    company: string;
+    insuranceType: string;
+    insuredMemberId: number;
+    policyholderMemberId?: number;
+    coverageAmount?: string;
+    coverageAmountText?: string;
+    annualPremium?: string;
+    currency: string;
+    effectiveDate?: Date;
+    expiryDate?: Date;
+    coveragePeriod?: string;
+    paymentMethod?: string;
+    coverageDetails?: string;
+    claimConditions?: string;
+    status: string;
+    notes?: string;
+  }>;
+  nextIds: { 
+    categories: number; 
+    assets: number; 
+    snapshots: number; 
+    assetValues: number; 
+    cashFlows: number; 
+    exchangeRates: number; 
+    portfolioSummary: number;
+    familyMembers: number;
+    insurancePolicies: number;
+  };
 }
 
 let localData: LocalData = {
@@ -36,18 +69,45 @@ let localData: LocalData = {
   cashFlows: [],
   exchangeRates: [],
   portfolioSummary: [],
-  nextIds: { categories: 1, assets: 1, snapshots: 1, assetValues: 1, cashFlows: 1, exchangeRates: 1, portfolioSummary: 1 }
+  familyMembers: [],
+  insurancePolicies: [],
+  nextIds: { 
+    categories: 1, 
+    assets: 1, 
+    snapshots: 1, 
+    assetValues: 1, 
+    cashFlows: 1, 
+    exchangeRates: 1, 
+    portfolioSummary: 1,
+    familyMembers: 1,
+    insurancePolicies: 1
+  }
 };
 
 function loadLocalData() {
   try {
     if (fs.existsSync(DATA_FILE)) {
       const content = fs.readFileSync(DATA_FILE, 'utf-8');
-      localData = JSON.parse(content);
+      const parsed = JSON.parse(content);
+      localData = {
+        ...localData,
+        ...parsed,
+        nextIds: { ...localData.nextIds, ...parsed.nextIds }
+      };
       // Convert date strings back to Date objects
       localData.snapshots = localData.snapshots.map(s => ({ ...s, snapshotDate: new Date(s.snapshotDate) }));
       localData.cashFlows = localData.cashFlows.map(c => ({ ...c, flowDate: new Date(c.flowDate) }));
       localData.exchangeRates = localData.exchangeRates.map(e => ({ ...e, effectiveDate: new Date(e.effectiveDate) }));
+      if (localData.familyMembers) {
+        localData.familyMembers = localData.familyMembers.map(m => ({ ...m, birthDate: m.birthDate ? new Date(m.birthDate) : undefined }));
+      }
+      if (localData.insurancePolicies) {
+        localData.insurancePolicies = localData.insurancePolicies.map(p => ({
+          ...p,
+          effectiveDate: p.effectiveDate ? new Date(p.effectiveDate) : undefined,
+          expiryDate: p.expiryDate ? new Date(p.expiryDate) : undefined
+        }));
+      }
     }
   } catch (error) {
     console.warn("[LocalStorage] Failed to load data:", error);
@@ -217,12 +277,11 @@ export async function getAssetsByCategory(categoryId: number) {
   return localData.assets.filter(a => a.categoryId === categoryId).sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
-export async function upsertAsset(asset: InsertAsset) {
+export async function upsertAsset(asset: InsertAsset): Promise<number | undefined> {
   const db = await getDb();
   if (db) {
-    // Check if asset exists
     const existing = await db.select().from(assets)
-      .where(and(eq(assets.categoryId, asset.categoryId), eq(assets.name, asset.name)))
+      .where(and(eq(assets.name, asset.name), eq(assets.categoryId, asset.categoryId)))
       .limit(1);
     
     if (existing.length > 0) {
@@ -236,7 +295,7 @@ export async function upsertAsset(asset: InsertAsset) {
     }
   }
   // Use local storage
-  const existing = localData.assets.find(a => a.categoryId === asset.categoryId && a.name === asset.name);
+  const existing = localData.assets.find(a => a.name === asset.name && a.categoryId === asset.categoryId);
   if (existing) {
     existing.currency = asset.currency;
     existing.suggestedRatio = asset.suggestedRatio;
@@ -280,34 +339,29 @@ export async function getAllSnapshots() {
   return [...localData.snapshots].sort((a, b) => new Date(a.snapshotDate).getTime() - new Date(b.snapshotDate).getTime());
 }
 
-export async function upsertSnapshot(snapshot: InsertSnapshot) {
+export async function upsertSnapshot(snapshot: InsertSnapshot): Promise<number | undefined> {
   const db = await getDb();
   if (db) {
-    const existing = await db.select().from(snapshots)
-      .where(eq(snapshots.label, snapshot.label))
-      .limit(1);
-    
+    const existing = await db.select().from(snapshots).where(eq(snapshots.label, snapshot.label)).limit(1);
     if (existing.length > 0) {
       return existing[0].id;
-    } else {
-      const result = await db.insert(snapshots).values(snapshot);
-      return result[0].insertId;
     }
+    const result = await db.insert(snapshots).values(snapshot);
+    return result[0].insertId;
   }
   // Use local storage
   const existing = localData.snapshots.find(s => s.label === snapshot.label);
   if (existing) {
     return existing.id;
-  } else {
-    const newId = localData.nextIds.snapshots++;
-    localData.snapshots.push({
-      id: newId,
-      snapshotDate: snapshot.snapshotDate,
-      label: snapshot.label
-    });
-    saveLocalData();
-    return newId;
   }
+  const newId = localData.nextIds.snapshots++;
+  localData.snapshots.push({
+    id: newId,
+    snapshotDate: snapshot.snapshotDate,
+    label: snapshot.label
+  });
+  saveLocalData();
+  return newId;
 }
 
 export async function getSnapshotByLabel(label: string) {
@@ -321,10 +375,10 @@ export async function getSnapshotByLabel(label: string) {
 }
 
 // ============ Asset Value Functions ============
-export async function getAssetValues(filters?: { categoryId?: number; snapshotId?: number }) {
+export async function getAssetValues(filter?: { categoryId?: number; snapshotId?: number }) {
   const db = await getDb();
   if (db) {
-    const query = db.select({
+    let query = db.select({
       id: assetValues.id,
       assetId: assetValues.assetId,
       snapshotId: assetValues.snapshotId,
@@ -333,26 +387,16 @@ export async function getAssetValues(filters?: { categoryId?: number; snapshotId
       changeFromPrevious: assetValues.changeFromPrevious,
       currentRatio: assetValues.currentRatio,
       assetName: assets.name,
-      assetCurrency: assets.currency,
       categoryId: assets.categoryId,
-      categoryName: assetCategories.name,
-      snapshotLabel: snapshots.label,
-      snapshotDate: snapshots.snapshotDate,
     })
     .from(assetValues)
-    .innerJoin(assets, eq(assetValues.assetId, assets.id))
-    .innerJoin(assetCategories, eq(assets.categoryId, assetCategories.id))
-    .innerJoin(snapshots, eq(assetValues.snapshotId, snapshots.id));
+    .innerJoin(assets, eq(assetValues.assetId, assets.id));
     
-    if (filters?.categoryId && filters?.snapshotId) {
-      return query.where(and(
-        eq(assets.categoryId, filters.categoryId),
-        eq(assetValues.snapshotId, filters.snapshotId)
-      ));
-    } else if (filters?.categoryId) {
-      return query.where(eq(assets.categoryId, filters.categoryId));
-    } else if (filters?.snapshotId) {
-      return query.where(eq(assetValues.snapshotId, filters.snapshotId));
+    if (filter?.categoryId) {
+      query = query.where(eq(assets.categoryId, filter.categoryId)) as typeof query;
+    }
+    if (filter?.snapshotId) {
+      query = query.where(eq(assetValues.snapshotId, filter.snapshotId)) as typeof query;
     }
     
     return query;
@@ -360,33 +404,20 @@ export async function getAssetValues(filters?: { categoryId?: number; snapshotId
   // Use local storage
   let result = localData.assetValues.map(av => {
     const asset = localData.assets.find(a => a.id === av.assetId);
-    const category = asset ? localData.categories.find(c => c.id === asset.categoryId) : undefined;
-    const snapshot = localData.snapshots.find(s => s.id === av.snapshotId);
     return {
-      id: av.id,
-      assetId: av.assetId,
-      snapshotId: av.snapshotId,
-      originalValue: av.originalValue,
-      cnyValue: av.cnyValue,
-      changeFromPrevious: av.changeFromPrevious,
-      currentRatio: av.currentRatio,
+      ...av,
       assetName: asset?.name || '',
-      assetCurrency: asset?.currency || 'CNY',
       categoryId: asset?.categoryId || 0,
-      categoryName: category?.name || '',
-      snapshotLabel: snapshot?.label || '',
-      snapshotDate: snapshot?.snapshotDate || new Date(),
     };
   });
-
-  if (filters?.categoryId && filters?.snapshotId) {
-    result = result.filter(r => r.categoryId === filters.categoryId && r.snapshotId === filters.snapshotId);
-  } else if (filters?.categoryId) {
-    result = result.filter(r => r.categoryId === filters.categoryId);
-  } else if (filters?.snapshotId) {
-    result = result.filter(r => r.snapshotId === filters.snapshotId);
+  
+  if (filter?.categoryId) {
+    result = result.filter(av => av.categoryId === filter.categoryId);
   }
-
+  if (filter?.snapshotId) {
+    result = result.filter(av => av.snapshotId === filter.snapshotId);
+  }
+  
   return result;
 }
 
@@ -453,9 +484,14 @@ export async function addCashFlow(flow: InsertCashFlow) {
     id: localData.nextIds.cashFlows++,
     flowDate: flow.flowDate,
     flowType: flow.flowType,
-    amount: flow.amount,
+    sourceAccount: flow.sourceAccount,
+    targetAccount: flow.targetAccount,
+    assetName: flow.assetName,
+    originalAmount: flow.originalAmount,
     currency: flow.currency,
-    description: flow.description
+    cnyAmount: flow.cnyAmount,
+    description: flow.description,
+    amount: flow.cnyAmount,
   });
   saveLocalData();
 }
@@ -467,7 +503,7 @@ export async function deleteCashFlow(id: number) {
     return;
   }
   // Use local storage
-  localData.cashFlows = localData.cashFlows.filter(c => c.id !== id);
+  localData.cashFlows = localData.cashFlows.filter(cf => cf.id !== id);
   saveLocalData();
 }
 
@@ -627,7 +663,195 @@ export async function clearAllData() {
     cashFlows: [],
     exchangeRates: [],
     portfolioSummary: [],
-    nextIds: { categories: 1, assets: 1, snapshots: 1, assetValues: 1, cashFlows: 1, exchangeRates: 1, portfolioSummary: 1 }
+    familyMembers: localData.familyMembers || [],
+    insurancePolicies: localData.insurancePolicies || [],
+    nextIds: { 
+      categories: 1, 
+      assets: 1, 
+      snapshots: 1, 
+      assetValues: 1, 
+      cashFlows: 1, 
+      exchangeRates: 1, 
+      portfolioSummary: 1,
+      familyMembers: localData.nextIds.familyMembers || 1,
+      insurancePolicies: localData.nextIds.insurancePolicies || 1
+    }
   };
   saveLocalData();
+}
+
+// ============ Family Member Functions ============
+export async function getAllFamilyMembers() {
+  const db = await getDb();
+  if (db) {
+    return db.select().from(familyMembers).orderBy(asc(familyMembers.sortOrder));
+  }
+  // Use local storage
+  return [...(localData.familyMembers || [])].sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+export async function getFamilyMemberById(id: number) {
+  const db = await getDb();
+  if (db) {
+    const result = await db.select().from(familyMembers).where(eq(familyMembers.id, id)).limit(1);
+    return result[0];
+  }
+  // Use local storage
+  return localData.familyMembers?.find(m => m.id === id);
+}
+
+export async function addFamilyMember(member: InsertFamilyMember): Promise<number> {
+  const db = await getDb();
+  if (db) {
+    const result = await db.insert(familyMembers).values(member);
+    return result[0].insertId;
+  }
+  // Use local storage
+  if (!localData.familyMembers) localData.familyMembers = [];
+  if (!localData.nextIds.familyMembers) localData.nextIds.familyMembers = 1;
+  
+  const newId = localData.nextIds.familyMembers++;
+  localData.familyMembers.push({
+    id: newId,
+    name: member.name,
+    role: member.role,
+    relationship: member.relationship,
+    birthDate: member.birthDate,
+    age: member.age,
+    sortOrder: member.sortOrder ?? 0
+  });
+  saveLocalData();
+  return newId;
+}
+
+export async function updateFamilyMember(id: number, member: Partial<InsertFamilyMember>) {
+  const db = await getDb();
+  if (db) {
+    await db.update(familyMembers).set(member).where(eq(familyMembers.id, id));
+    return;
+  }
+  // Use local storage
+  const existing = localData.familyMembers?.find(m => m.id === id);
+  if (existing) {
+    if (member.name !== undefined) existing.name = member.name;
+    if (member.role !== undefined) existing.role = member.role;
+    if (member.relationship !== undefined) existing.relationship = member.relationship;
+    if (member.birthDate !== undefined) existing.birthDate = member.birthDate;
+    if (member.age !== undefined) existing.age = member.age;
+    if (member.sortOrder !== undefined) existing.sortOrder = member.sortOrder;
+    saveLocalData();
+  }
+}
+
+export async function deleteFamilyMember(id: number) {
+  const db = await getDb();
+  if (db) {
+    await db.delete(familyMembers).where(eq(familyMembers.id, id));
+    return;
+  }
+  // Use local storage
+  if (localData.familyMembers) {
+    localData.familyMembers = localData.familyMembers.filter(m => m.id !== id);
+    saveLocalData();
+  }
+}
+
+// ============ Insurance Policy Functions ============
+export async function getAllInsurancePolicies() {
+  const db = await getDb();
+  if (db) {
+    return db.select().from(insurancePolicies).orderBy(asc(insurancePolicies.insuranceType));
+  }
+  // Use local storage
+  return [...(localData.insurancePolicies || [])].sort((a, b) => a.insuranceType.localeCompare(b.insuranceType));
+}
+
+export async function getInsurancePolicyById(id: number) {
+  const db = await getDb();
+  if (db) {
+    const result = await db.select().from(insurancePolicies).where(eq(insurancePolicies.id, id)).limit(1);
+    return result[0];
+  }
+  // Use local storage
+  return localData.insurancePolicies?.find(p => p.id === id);
+}
+
+export async function getInsurancePoliciesByMember(memberId: number) {
+  const db = await getDb();
+  if (db) {
+    return db.select().from(insurancePolicies).where(eq(insurancePolicies.insuredMemberId, memberId));
+  }
+  // Use local storage
+  return localData.insurancePolicies?.filter(p => p.insuredMemberId === memberId) || [];
+}
+
+export async function getInsurancePoliciesByType(insuranceType: string) {
+  const db = await getDb();
+  if (db) {
+    return db.select().from(insurancePolicies).where(eq(insurancePolicies.insuranceType, insuranceType));
+  }
+  // Use local storage
+  return localData.insurancePolicies?.filter(p => p.insuranceType === insuranceType) || [];
+}
+
+export async function addInsurancePolicy(policy: InsertInsurancePolicy): Promise<number> {
+  const db = await getDb();
+  if (db) {
+    const result = await db.insert(insurancePolicies).values(policy);
+    return result[0].insertId;
+  }
+  // Use local storage
+  if (!localData.insurancePolicies) localData.insurancePolicies = [];
+  if (!localData.nextIds.insurancePolicies) localData.nextIds.insurancePolicies = 1;
+  
+  const newId = localData.nextIds.insurancePolicies++;
+  localData.insurancePolicies.push({
+    id: newId,
+    name: policy.name,
+    company: policy.company,
+    insuranceType: policy.insuranceType,
+    insuredMemberId: policy.insuredMemberId,
+    policyholderMemberId: policy.policyholderMemberId,
+    coverageAmount: policy.coverageAmount,
+    coverageAmountText: policy.coverageAmountText,
+    annualPremium: policy.annualPremium,
+    currency: policy.currency,
+    effectiveDate: policy.effectiveDate,
+    expiryDate: policy.expiryDate,
+    coveragePeriod: policy.coveragePeriod,
+    paymentMethod: policy.paymentMethod,
+    coverageDetails: policy.coverageDetails,
+    claimConditions: policy.claimConditions,
+    status: policy.status,
+    notes: policy.notes
+  });
+  saveLocalData();
+  return newId;
+}
+
+export async function updateInsurancePolicy(id: number, policy: Partial<InsertInsurancePolicy>) {
+  const db = await getDb();
+  if (db) {
+    await db.update(insurancePolicies).set(policy).where(eq(insurancePolicies.id, id));
+    return;
+  }
+  // Use local storage
+  const existing = localData.insurancePolicies?.find(p => p.id === id);
+  if (existing) {
+    Object.assign(existing, policy);
+    saveLocalData();
+  }
+}
+
+export async function deleteInsurancePolicy(id: number) {
+  const db = await getDb();
+  if (db) {
+    await db.delete(insurancePolicies).where(eq(insurancePolicies.id, id));
+    return;
+  }
+  // Use local storage
+  if (localData.insurancePolicies) {
+    localData.insurancePolicies = localData.insurancePolicies.filter(p => p.id !== id);
+    saveLocalData();
+  }
 }
