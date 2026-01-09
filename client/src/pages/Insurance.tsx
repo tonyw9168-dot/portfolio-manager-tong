@@ -581,7 +581,7 @@ export default function Insurance() {
                         <SelectValue placeholder="选择投保人" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">无</SelectItem>
+                        <SelectItem value="none">无</SelectItem>
                         {familyMembers.map(member => (
                           <SelectItem key={member.id} value={member.id.toString()}>{member.name}</SelectItem>
                         ))}
