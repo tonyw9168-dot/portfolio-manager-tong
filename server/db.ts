@@ -143,7 +143,7 @@ export async function getDb() {
         database: url.pathname.slice(1),
         ssl: {
           minVersion: 'TLSv1.2',
-          rejectUnauthorized: true
+          rejectUnauthorized: false
         }
       });
       
