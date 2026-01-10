@@ -1,5 +1,6 @@
 import { eq, and, asc, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import { 
   InsertUser, users,
   assetCategories, InsertAssetCategory,
@@ -126,11 +127,28 @@ function saveLocalData() {
 loadLocalData();
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _connection: mysql.Connection | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      // Parse DATABASE_URL for TiDB Cloud SSL connection
+      const url = new URL(process.env.DATABASE_URL);
+      
+      _connection = await mysql.createConnection({
+        host: url.hostname,
+        port: parseInt(url.port) || 4000,
+        user: decodeURIComponent(url.username),
+        password: decodeURIComponent(url.password),
+        database: url.pathname.slice(1),
+        ssl: {
+          minVersion: 'TLSv1.2',
+          rejectUnauthorized: true
+        }
+      });
+      
+      _db = drizzle({ client: _connection });
+      console.log("[Database] Connected to TiDB Cloud successfully");
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -894,3 +912,4 @@ export async function deleteInsurancePolicy(id: number) {
     saveLocalData();
   }
 }
+
