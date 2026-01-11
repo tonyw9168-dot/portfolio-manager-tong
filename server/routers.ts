@@ -625,26 +625,33 @@ export const appRouter = router({
         notes: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        const id = await addInsurancePolicy({
-          name: input.name,
-          company: input.company,
-          insuranceType: input.insuranceType,
-          insuredMemberId: input.insuredMemberId,
-          policyholderMemberId: input.policyholderMemberId,
-          coverageAmount: input.coverageAmount,
-          coverageAmountText: input.coverageAmountText,
-          annualPremium: input.annualPremium,
-          currency: input.currency,
-          effectiveDate: input.effectiveDate ? new Date(input.effectiveDate) : undefined,
-          expiryDate: input.expiryDate ? new Date(input.expiryDate) : undefined,
-          coveragePeriod: input.coveragePeriod,
-          paymentMethod: input.paymentMethod,
-          coverageDetails: input.coverageDetails,
-          claimConditions: input.claimConditions,
-          status: input.status,
-          notes: input.notes,
-        });
-        return { success: true, id };
+        try {
+          console.log('[Insurance] Adding policy, input:', JSON.stringify(input));
+          const id = await addInsurancePolicy({
+            name: input.name,
+            company: input.company,
+            insuranceType: input.insuranceType,
+            insuredMemberId: input.insuredMemberId,
+            policyholderMemberId: input.policyholderMemberId,
+            coverageAmount: input.coverageAmount,
+            coverageAmountText: input.coverageAmountText,
+            annualPremium: input.annualPremium,
+            currency: input.currency,
+            effectiveDate: input.effectiveDate ? new Date(input.effectiveDate) : undefined,
+            expiryDate: input.expiryDate ? new Date(input.expiryDate) : undefined,
+            coveragePeriod: input.coveragePeriod,
+            paymentMethod: input.paymentMethod,
+            coverageDetails: input.coverageDetails,
+            claimConditions: input.claimConditions,
+            status: input.status,
+            notes: input.notes,
+          });
+          console.log('[Insurance] Policy added successfully, id:', id);
+          return { success: true, id };
+        } catch (error) {
+          console.error('[Insurance] Error adding policy:', error);
+          throw error;
+        }
       }),
     update: publicProcedure
       .input(z.object({
