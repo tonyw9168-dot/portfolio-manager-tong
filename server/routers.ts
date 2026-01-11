@@ -587,22 +587,44 @@ export const appRouter = router({
   // Insurance Policies
   insurance: router({
     list: publicProcedure.query(async () => {
-      return getAllInsurancePolicies();
+      const policies = await getAllInsurancePolicies();
+      // Convert Date objects to ISO strings for frontend compatibility
+      return policies.map(policy => ({
+        ...policy,
+        effectiveDate: policy.effectiveDate instanceof Date ? policy.effectiveDate.toISOString().split('T')[0] : policy.effectiveDate,
+        expiryDate: policy.expiryDate instanceof Date ? policy.expiryDate.toISOString().split('T')[0] : policy.expiryDate,
+      }));
     }),
     get: publicProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
-        return getInsurancePolicyById(input.id);
+        const policy = await getInsurancePolicyById(input.id);
+        if (!policy) return null;
+        return {
+          ...policy,
+          effectiveDate: policy.effectiveDate instanceof Date ? policy.effectiveDate.toISOString().split('T')[0] : policy.effectiveDate,
+          expiryDate: policy.expiryDate instanceof Date ? policy.expiryDate.toISOString().split('T')[0] : policy.expiryDate,
+        };
       }),
     byMember: publicProcedure
       .input(z.object({ memberId: z.number() }))
       .query(async ({ input }) => {
-        return getInsurancePoliciesByMember(input.memberId);
+        const policies = await getInsurancePoliciesByMember(input.memberId);
+        return policies.map(policy => ({
+          ...policy,
+          effectiveDate: policy.effectiveDate instanceof Date ? policy.effectiveDate.toISOString().split('T')[0] : policy.effectiveDate,
+          expiryDate: policy.expiryDate instanceof Date ? policy.expiryDate.toISOString().split('T')[0] : policy.expiryDate,
+        }));
       }),
     byType: publicProcedure
       .input(z.object({ insuranceType: z.string() }))
       .query(async ({ input }) => {
-        return getInsurancePoliciesByType(input.insuranceType);
+        const policies = await getInsurancePoliciesByType(input.insuranceType);
+        return policies.map(policy => ({
+          ...policy,
+          effectiveDate: policy.effectiveDate instanceof Date ? policy.effectiveDate.toISOString().split('T')[0] : policy.effectiveDate,
+          expiryDate: policy.expiryDate instanceof Date ? policy.expiryDate.toISOString().split('T')[0] : policy.expiryDate,
+        }));
       }),
     add: publicProcedure
       .input(z.object({
