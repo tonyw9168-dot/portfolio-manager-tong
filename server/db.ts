@@ -866,7 +866,22 @@ export async function getInsurancePoliciesByType(insuranceType: string) {
 export async function addInsurancePolicy(policy: InsertInsurancePolicy): Promise<number> {
   const db = await getDb();
   if (db) {
-    const result = await db.insert(insurancePolicies).values(policy);
+    // Convert empty strings to undefined for optional fields to avoid database type errors
+    const cleanedPolicy = {
+      ...policy,
+      coverageAmount: policy.coverageAmount === '' ? undefined : policy.coverageAmount,
+      coverageAmountText: policy.coverageAmountText === '' ? undefined : policy.coverageAmountText,
+      annualPremium: policy.annualPremium === '' ? undefined : policy.annualPremium,
+      effectiveDate: policy.effectiveDate === '' || policy.effectiveDate === undefined ? undefined : policy.effectiveDate,
+      expiryDate: policy.expiryDate === '' || policy.expiryDate === undefined ? undefined : policy.expiryDate,
+      coveragePeriod: policy.coveragePeriod === '' ? undefined : policy.coveragePeriod,
+      paymentMethod: policy.paymentMethod === '' ? undefined : policy.paymentMethod,
+      coverageDetails: policy.coverageDetails === '' ? undefined : policy.coverageDetails,
+      claimConditions: policy.claimConditions === '' ? undefined : policy.claimConditions,
+      notes: policy.notes === '' ? undefined : policy.notes,
+      policyholderMemberId: policy.policyholderMemberId === undefined || policy.policyholderMemberId === null ? undefined : policy.policyholderMemberId,
+    };
+    const result = await db.insert(insurancePolicies).values(cleanedPolicy);
     return result[0].insertId;
   }
   // Use local storage
