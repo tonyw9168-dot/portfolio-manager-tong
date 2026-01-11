@@ -130,6 +130,17 @@ let _db: ReturnType<typeof drizzle> | null = null;
 let _connection: mysql.Connection | null = null;
 
 export async function getDb() {
+  // Check if existing connection is still valid
+  if (_connection) {
+    try {
+      await _connection.ping();
+    } catch (error) {
+      console.log("[Database] Connection lost, reconnecting...");
+      _db = null;
+      _connection = null;
+    }
+  }
+  
   if (!_db && process.env.DATABASE_URL) {
     try {
       // Parse DATABASE_URL for TiDB Cloud SSL connection
@@ -152,6 +163,7 @@ export async function getDb() {
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
+      _connection = null;
     }
   }
   return _db;
