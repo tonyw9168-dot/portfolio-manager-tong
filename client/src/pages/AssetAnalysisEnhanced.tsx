@@ -12,6 +12,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
   ResponsiveContainer, Cell, LineChart, Line
 } from "recharts";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 // 图表颜色配置
 const CATEGORY_COLORS: Record<string, string> = {
@@ -23,7 +25,26 @@ const CATEGORY_COLORS: Record<string, string> = {
   "现金": "#6b7280",
 };
 
-export default function AnalysisPage() {
+interface CategoryWithDetails {
+  name: string;
+  currentValue: number;
+  change: number;
+  changePercent: number;
+  color: string;
+  assets: Array<{
+    name: string;
+    quantity?: number;
+    currentValue: number;
+    change: number;
+    changePercent: number;
+    buyDate?: string;
+    sellDate?: string;
+    cost?: number;
+    roi?: number;
+  }>;
+}
+
+export default function AssetAnalysisEnhanced() {
   const [viewMode, setViewMode] = useState<"category" | "asset" | "time">("category");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -31,6 +52,7 @@ export default function AnalysisPage() {
   const { data: categories } = trpc.categories.list.useQuery();
   const { data: snapshots } = trpc.snapshots.list.useQuery();
   const { data: assetValues } = trpc.assetValues.list.useQuery();
+  const { data: assets } = trpc.assets.list.useQuery();
 
   // 获取排序后的快照
   const sortedSnapshots = useMemo(() => {
@@ -79,6 +101,62 @@ export default function AnalysisPage() {
       };
     }).filter(cat => cat.currentValue > 0);
   }, [sortedSnapshots, assetValues, categories]);
+
+  // 按类别获取详细资产明细
+  const categoryDetailsData = useMemo(() => {
+    if (!assetValues || !categories || !sortedSnapshots.length) return {};
+
+    const details: Record<string, CategoryWithDetails> = {};
+
+    categories.forEach(cat => {
+      const catAssets = assetValues.filter(av => av.categoryId === cat.id);
+      
+      if (catAssets.length === 0) return;
+
+      // 获取该类别的最新快照数据
+      const latestSnapshot = sortedSnapshots[sortedSnapshots.length - 1];
+      const latestCatAssets = catAssets.filter(av => av.snapshotId === latestSnapshot.id);
+      
+      // 获取之前快照数据用于对比
+      const prevSnapshot = sortedSnapshots.length > 1 ? sortedSnapshots[sortedSnapshots.length - 2] : null;
+      const prevCatAssets = prevSnapshot ? catAssets.filter(av => av.snapshotId === prevSnapshot.id) : [];
+
+      const categoryData = categoryComparisonData.find(c => c.name === cat.name);
+      
+      const assetDetails = latestCatAssets.map(av => {
+        const asset = assets?.find(a => a.id === av.assetId);
+        const prevValue = prevCatAssets.find(pav => pav.assetId === av.assetId);
+        
+        const currentValue = Number(av.cnyValue || 0);
+        const prevValueAmount = prevValue ? Number(prevValue.cnyValue || 0) : currentValue;
+        const change = currentValue - prevValueAmount;
+        const changePercent = prevValueAmount > 0 ? (change / prevValueAmount) * 100 : 0;
+
+        return {
+          name: asset?.name || av.assetName || `资产${av.id}`,
+          quantity: av.quantity,
+          currentValue,
+          change,
+          changePercent,
+          buyDate: av.buyDate,
+          sellDate: av.sellDate,
+          cost: av.cost,
+          roi: av.roi
+        };
+      });
+
+      details[cat.name] = {
+        name: cat.name,
+        currentValue: categoryData?.currentValue || 0,
+        change: categoryData?.change || 0,
+        changePercent: categoryData?.changePercent || 0,
+        color: CATEGORY_COLORS[cat.name] || "#888888",
+        assets: assetDetails
+      };
+    });
+
+    return details;
+  }, [assetValues, categories, sortedSnapshots, categoryComparisonData, assets]);
 
   // 按时间点汇总数据（纵向对比）
   const timeComparisonData = useMemo(() => {
@@ -191,40 +269,6 @@ export default function AnalysisPage() {
     setExpandedCategories(newExpanded);
   };
 
-  // 获取类别下的资产明细
-  const getCategoryAssets = (categoryName: string) => {
-    const category = categories?.find(c => c.name === categoryName);
-    if (!category || !assetValues) return [];
-    
-    const latestSnapshot = sortedSnapshots[sortedSnapshots.length - 1];
-    if (!latestSnapshot) return [];
-    
-    const categoryAssets = assetValues.filter(
-      av => av.snapshotId === latestSnapshot.id && av.categoryId === category.id
-    );
-    
-    const prevSnapshot = sortedSnapshots.length > 1 ? sortedSnapshots[sortedSnapshots.length - 2] : null;
-    const prevCategoryAssets = prevSnapshot ? assetValues.filter(
-      av => av.snapshotId === prevSnapshot.id && av.categoryId === category.id
-    ) : [];
-    
-    return categoryAssets.map(av => {
-      const prevValue = prevCategoryAssets.find(pav => pav.assetId === av.assetId);
-      const currentValue = Number(av.cnyValue || 0);
-      const prevValueAmount = prevValue ? Number(prevValue.cnyValue || 0) : currentValue;
-      const change = currentValue - prevValueAmount;
-      const changePercent = prevValueAmount > 0 ? (change / prevValueAmount) * 100 : 0;
-      
-      return {
-        name: av.assetName,
-        value: currentValue,
-        change,
-        changePercent,
-        ratio: Number(av.currentRatio || 0)
-      };
-    }).sort((a, b) => b.value - a.value);
-  };
-
   return (
     <Layout>
       <div className="space-y-6">
@@ -264,7 +308,7 @@ export default function AnalysisPage() {
             <div className="space-y-3">
               {categoryComparisonData.map((cat) => {
                 const isExpanded = expandedCategories.has(cat.name as string);
-                const categoryAssets = getCategoryAssets(cat.name as string);
+                const categoryDetail = categoryDetailsData[cat.name as string];
                 
                 return (
                   <Card key={cat.name as string} className="overflow-hidden">
@@ -306,29 +350,31 @@ export default function AnalysisPage() {
                       </button>
 
                       {/* 展开的详细明细 */}
-                      {isExpanded && (
+                      {isExpanded && categoryDetail && (
                         <div className="border-t border-border bg-muted/30 p-4">
                           <div className="space-y-3">
                             <h4 className="text-sm font-semibold text-foreground">资产明细</h4>
-                            {categoryAssets.length > 0 ? (
+                            {categoryDetail.assets.length > 0 ? (
                               <div className="space-y-2">
-                                {categoryAssets.map((asset, idx) => (
+                                {categoryDetail.assets.map((asset, idx) => (
                                   <div 
                                     key={idx}
                                     className="p-3 bg-background rounded-lg border border-border/50 hover:border-border transition-colors"
                                   >
-                                    <div className="flex items-start justify-between">
+                                    <div className="flex items-start justify-between mb-2">
                                       <div>
                                         <div className="text-sm font-medium text-foreground">
                                           {asset.name}
                                         </div>
-                                        <div className="text-xs text-muted-foreground mt-1">
-                                          占比: {(asset.ratio * 100).toFixed(2)}%
-                                        </div>
+                                        {asset.buyDate && (
+                                          <div className="text-xs text-muted-foreground mt-1">
+                                            买入时间: {asset.buyDate}
+                                          </div>
+                                        )}
                                       </div>
                                       <div className="text-right">
                                         <div className="text-sm font-semibold text-foreground">
-                                          {formatCurrency(asset.value)}
+                                          {formatCurrency(asset.currentValue)}
                                         </div>
                                         <div className={`text-xs font-medium ${
                                           asset.change >= 0 ? 'text-green-600' : 'text-red-600'
@@ -337,6 +383,30 @@ export default function AnalysisPage() {
                                         </div>
                                       </div>
                                     </div>
+                                    {(asset.quantity || asset.cost || asset.roi) && (
+                                      <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground pt-2 border-t border-border/30">
+                                        {asset.quantity && (
+                                          <div>
+                                            <span className="text-muted-foreground">数量:</span>
+                                            <div className="font-medium text-foreground">{asset.quantity}</div>
+                                          </div>
+                                        )}
+                                        {asset.cost && (
+                                          <div>
+                                            <span className="text-muted-foreground">成本:</span>
+                                            <div className="font-medium text-foreground">{formatCurrency(asset.cost)}</div>
+                                          </div>
+                                        )}
+                                        {asset.roi && (
+                                          <div>
+                                            <span className="text-muted-foreground">收益率:</span>
+                                            <div className={`font-medium ${asset.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                              {formatPercent(asset.roi)}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                               </div>
@@ -397,59 +467,6 @@ export default function AnalysisPage() {
                       ))}
                     </LineChart>
                   </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 类别对比矩阵 */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base sm:text-lg">类别对比矩阵</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="mobile-table-wrapper">
-                  <table className="data-table min-w-[500px]">
-                    <thead>
-                      <tr>
-                        <th>类别</th>
-                        {sortedSnapshots.map(s => {
-                          const date = new Date(s.snapshotDate);
-                          return (
-                            <th key={s.id}>
-                              {(date.getMonth() + 1).toString().padStart(2, '0')}/{date.getDate().toString().padStart(2, '0')}
-                            </th>
-                          );
-                        })}
-                        <th>变化</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {categoryComparisonData.map((cat) => (
-                        <tr key={cat.name as string}>
-                          <td className="font-medium">
-                            <div className="flex items-center gap-2">
-                              <div 
-                                className="w-2 h-2 rounded-full" 
-                                style={{ backgroundColor: cat.color }}
-                              />
-                              {cat.name as string}
-                            </div>
-                          </td>
-                          {sortedSnapshots.map(s => {
-                            const date = new Date(s.snapshotDate);
-                            const dateLabel = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
-                            const value = (cat as Record<string, unknown>)[dateLabel] as number || 0;
-                            return (
-                              <td key={s.id}>{formatCurrency(value)}</td>
-                            );
-                          })}
-                          <td className={cat.change >= 0 ? 'profit-indicator' : 'loss-indicator'}>
-                            {formatPercent(cat.changePercent)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
                 </div>
               </CardContent>
             </Card>

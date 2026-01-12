@@ -124,7 +124,7 @@ export default function PerformanceReport() {
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-foreground">投资绩效报告</h1>
+          <h1 className="text-2xl font-bold text-foreground">收益分析</h1>
           <p className="text-muted-foreground mt-1">
             与市场基准进行对比分析，评估投资表现
           </p>
