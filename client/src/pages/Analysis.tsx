@@ -3,6 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { useState, useMemo } from "react";
+import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Edit2, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -48,9 +49,14 @@ export default function AnalysisPage() {
   
   const { data: categories } = trpc.categories.list.useQuery();
   const { data: snapshots } = trpc.snapshots.list.useQuery();
-  const { data: assetValues } = trpc.assetValues.list.useQuery();
-  const { data: assets } = trpc.assets.list.useQuery();
-  const { refetch } = trpc.assets.list.useQuery();
+  const { data: assetValues, refetch: refetchAssetValues } = trpc.assetValues.list.useQuery();
+  const { data: assets, refetch: refetchAssets } = trpc.assets.list.useQuery();
+  
+  // 刷新所有数据
+  const refetchAll = () => {
+    refetchAssets();
+    refetchAssetValues();
+  };
 
   // 获取排序后的快照
   const sortedSnapshots = useMemo(() => {
@@ -209,7 +215,7 @@ export default function AnalysisPage() {
       toast.success('资产已更新');
       setIsEditDialogOpen(false);
       setEditingAsset(null);
-      refetch();
+      refetchAll();
     } catch (error) {
       toast.error('更新失败');
     }
@@ -223,7 +229,7 @@ export default function AnalysisPage() {
       toast.success('资产已删除');
       setIsDeleteDialogOpen(false);
       setAssetToDelete(null);
-      refetch();
+      refetchAll();
     } catch (error) {
       toast.error('删除失败');
     }
@@ -245,7 +251,7 @@ export default function AnalysisPage() {
       toast.success('资产已添加');
       setIsAddDialogOpen(false);
       setNewAssetData({ assetName: '', categoryId: 0, cnyValue: '', notes: '' });
-      refetch();
+      refetchAll();
     } catch (error) {
       toast.error('添加失败');
     }
@@ -264,7 +270,8 @@ export default function AnalysisPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <Layout>
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">高级持仓分析</h1>
@@ -570,6 +577,7 @@ export default function AnalysisPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </Layout>
   );
 }
