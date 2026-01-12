@@ -79,6 +79,7 @@ export default function CashFlowEnhanced() {
   const { data: cashFlows, isLoading, refetch } = trpc.cashFlows.list.useQuery();
   const { data: exchangeRates } = trpc.exchangeRates.list.useQuery();
   const addMutation = trpc.cashFlows.add.useMutation();
+  const updateMutation = trpc.cashFlows.update.useMutation();
   const deleteMutation = trpc.cashFlows.delete.useMutation();
 
   const getExchangeRate = (currency: string): number => {
@@ -138,8 +139,21 @@ export default function CashFlowEnhanced() {
 
     try {
       if (isEditMode && selectedFlow) {
-        // 编辑模式 - 这里需要调用更新API
-        toast.info("编辑功能开发中");
+        await updateMutation.mutateAsync({
+          id: selectedFlow.id,
+          flowDate: formData.flowDate,
+          flowType: formData.flowType,
+          sourceAccount: formData.sourceAccount,
+          targetAccount: formData.targetAccount,
+          assetName: formData.assetName,
+          originalAmount: originalAmount,
+          currency: formData.currency,
+          cnyAmount: cnyAmount,
+          description: formData.description,
+        });
+        toast.success("现金流更新成功");
+        refetch();
+        handleCloseDialog();
       } else {
         await addMutation.mutateAsync({
           flowDate: formData.flowDate,

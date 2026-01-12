@@ -53,6 +53,9 @@ export default function PortfolioPlanningEnhanced() {
   });
 
   const { data: categories, refetch } = trpc.categories.list.useQuery();
+  const addMutation = trpc.categories.add.useMutation();
+  const updateMutation = trpc.categories.update.useMutation();
+  const deleteMutation = trpc.categories.delete.useMutation();
 
   const handleOpenDialog = (category?: any) => {
     if (category) {
@@ -91,11 +94,21 @@ export default function PortfolioPlanningEnhanced() {
       const ratio = parseFloat(formData.suggestedRatio) / 100;
       
       if (isEditMode && selectedCategory) {
-        toast.info("编辑功能开发中");
+        await updateMutation.mutateAsync({
+          id: selectedCategory.id,
+          name: formData.name,
+          suggestedRatio: ratio,
+        });
+        toast.success("配置类别更新成功");
       } else {
-        toast.info("新增类别功能开发中");
+        await addMutation.mutateAsync({
+          name: formData.name,
+          suggestedRatio: ratio,
+        });
+        toast.success("配置类别添加成功");
       }
       
+      refetch();
       handleCloseDialog();
     } catch (error) {
       toast.error("操作失败，请重试");
@@ -106,7 +119,9 @@ export default function PortfolioPlanningEnhanced() {
   const handleDelete = async () => {
     if (!selectedCategory) return;
     try {
-      toast.info("删除功能开发中");
+      await deleteMutation.mutateAsync({ id: selectedCategory.id });
+      toast.success("配置类别删除成功");
+      refetch();
       setIsDeleteDialogOpen(false);
       setSelectedCategory(null);
     } catch (error) {
