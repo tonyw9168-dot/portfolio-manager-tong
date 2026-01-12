@@ -1073,6 +1073,27 @@ export default function Insurance() {
                           <Button variant="ghost" size="icon" onClick={() => openEditPolicy(policy)}>
                             <Edit className="h-4 w-4" />
                           </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>确认删除</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  确定要删除保险 "{policy.name}" 吗？此操作不可撤销。
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>取消</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deletePolicyMutation.mutate({ id: policy.id })}>
+                                  删除
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                     ))}
