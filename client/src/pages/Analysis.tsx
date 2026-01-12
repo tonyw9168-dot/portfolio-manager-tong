@@ -52,6 +52,11 @@ export default function AnalysisPage() {
   const { data: assetValues, refetch: refetchAssetValues } = trpc.assetValues.list.useQuery();
   const { data: assets, refetch: refetchAssets } = trpc.assets.list.useQuery();
   
+  // Mutation 钩子
+  const deleteMutation = trpc.assets.delete.useMutation();
+  const updateMutation = trpc.assets.update.useMutation();
+  const createMutation = trpc.assets.create.useMutation();
+  
   // 刷新所有数据
   const refetchAll = () => {
     refetchAssets();
@@ -206,7 +211,7 @@ export default function AnalysisPage() {
   const handleSaveEdit = async () => {
     if (!editingAsset) return;
     try {
-      await trpc.assets.update.mutate({
+      await updateMutation.mutateAsync({
         id: editingAsset.id,
         assetName: editingAsset.name,
         categoryId: editingAsset.categoryId,
@@ -218,6 +223,7 @@ export default function AnalysisPage() {
       refetchAll();
     } catch (error) {
       toast.error('更新失败');
+      console.error(error);
     }
   };
 
@@ -225,13 +231,14 @@ export default function AnalysisPage() {
   const handleConfirmDelete = async () => {
     if (!assetToDelete) return;
     try {
-      await trpc.assets.delete.mutate({ id: assetToDelete.id });
+      await deleteMutation.mutateAsync({ id: assetToDelete.id });
       toast.success('资产已删除');
       setIsDeleteDialogOpen(false);
       setAssetToDelete(null);
       refetchAll();
     } catch (error) {
       toast.error('删除失败');
+      console.error(error);
     }
   };
 
@@ -242,7 +249,7 @@ export default function AnalysisPage() {
       return;
     }
     try {
-      await trpc.assets.create.mutate({
+      await createMutation.mutateAsync({
         assetName: newAssetData.assetName,
         categoryId: newAssetData.categoryId || 1,
         cnyValue: newAssetData.cnyValue ? parseFloat(newAssetData.cnyValue) : undefined,
@@ -254,6 +261,7 @@ export default function AnalysisPage() {
       refetchAll();
     } catch (error) {
       toast.error('添加失败');
+      console.error(error);
     }
   };
 
