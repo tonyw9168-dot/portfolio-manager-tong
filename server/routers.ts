@@ -79,6 +79,24 @@ export const appRouter = router({
           currency: input.originalCurrency || 'CNY',
           sortOrder: 0,
         });
+        
+        // 为最新的 snapshot 创建 assetValue 记录
+        if (assetId) {
+          const snapshots = await getAllSnapshots();
+          if (snapshots && snapshots.length > 0) {
+            // 获取最新的 snapshot（通常是最后一个）
+            const latestSnapshot = snapshots[snapshots.length - 1];
+            const cnyValue = input.cnyValue || (input.originalValue || 0) * (input.originalCurrency === 'CNY' ? 1 : 1);
+            
+            await upsertAssetValue({
+              assetId,
+              snapshotId: latestSnapshot.id,
+              originalValue: input.originalValue ? input.originalValue.toString() : undefined,
+              cnyValue: cnyValue.toString(),
+            });
+          }
+        }
+        
         return { success: true, id: assetId };
       }),
     update: publicProcedure
