@@ -19,6 +19,11 @@ import Forecast from "./pages/Forecast";
 import Insurance from "./pages/Insurance";
 import { AuthProvider, useAuthContext } from "./contexts/AuthContext";
 
+// Phase 1 重设计：新的合并页面（暂时指向现有页面）
+// 资产分析 = Holdings + Analysis + History
+// 性能分析 = ProfitLossDetail + PerformanceReport + Summary
+// 配置规划 = Targets + Forecast
+
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuthContext();
@@ -57,6 +62,12 @@ function Router() {
       <Route path="/cashflow" component={() => <ProtectedRoute component={CashFlow} />} />
       <Route path="/insurance" component={() => <ProtectedRoute component={Insurance} />} />
       <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
+      
+      {/* Phase 1 重设计：新的合并路由 */}
+      <Route path="/asset-analysis" component={() => <ProtectedRoute component={Analysis} />} />
+      <Route path="/performance-analysis" component={() => <ProtectedRoute component={PerformanceReport} />} />
+      <Route path="/portfolio-planning" component={() => <ProtectedRoute component={Targets} />} />
+      
       <Route path="/login" component={Login} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

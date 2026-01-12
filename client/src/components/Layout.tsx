@@ -27,14 +27,9 @@ interface LayoutProps {
 
 const navItems = [
   { href: "/", label: "仪表板", icon: LayoutDashboard, mobileLabel: "概览" },
-  { href: "/holdings", label: "持仓明细", icon: Wallet, mobileLabel: "持仓" },
-  { href: "/analysis", label: "高级分析", icon: BarChart3, mobileLabel: "分析" },
-  { href: "/history", label: "历史对比", icon: History, mobileLabel: "历史" },
-  { href: "/summary", label: "投资总结", icon: FileText, mobileLabel: "总结" },
-  { href: "/profit-loss", label: "盈亏明细", icon: TrendingUp, mobileLabel: "盈亏" },
-  { href: "/performance", label: "绩效报告", icon: BarChart3, mobileLabel: "报告" },
-  { href: "/targets", label: "目标配置", icon: Target, mobileLabel: "目标" },
-  { href: "/forecast", label: "走势预测", icon: Sparkles, mobileLabel: "预测" },
+  { href: "/asset-analysis", label: "资产分析", icon: Wallet, mobileLabel: "资产" },
+  { href: "/performance-analysis", label: "性能分析", icon: BarChart3, mobileLabel: "性能" },
+  { href: "/portfolio-planning", label: "配置规划", icon: Target, mobileLabel: "规划" },
   { href: "/cashflow", label: "现金流量", icon: ArrowLeftRight, mobileLabel: "流量" },
   { href: "/insurance", label: "家庭保险", icon: Shield, mobileLabel: "保险" },
   { href: "/settings", label: "设置", icon: Settings, mobileLabel: "设置" },
@@ -43,9 +38,9 @@ const navItems = [
 // 移动端底部导航只显示主要功能
 const mobileNavItems = [
   { href: "/", label: "概览", icon: LayoutDashboard },
-  { href: "/holdings", label: "持仓", icon: Wallet },
+  { href: "/asset-analysis", label: "资产", icon: Wallet },
   { href: "/insurance", label: "保险", icon: Shield },
-  { href: "/analysis", label: "分析", icon: BarChart3 },
+  { href: "/performance-analysis", label: "性能", icon: BarChart3 },
   { href: "/settings", label: "更多", icon: Menu },
 ];
 
@@ -190,7 +185,7 @@ export default function Layout({ children }: LayoutProps) {
         <div className="flex items-center justify-around px-2 py-1">
           {mobileNavItems.map((item) => {
             const isActive = item.href === "/settings" 
-              ? ["/settings", "/cashflow", "/summary", "/targets", "/history"].includes(location)
+              ? ["/settings", "/cashflow"].includes(location)
               : location === item.href;
             
             if (item.href === "/settings") {
