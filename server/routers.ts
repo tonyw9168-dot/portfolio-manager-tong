@@ -250,9 +250,12 @@ export const appRouter = router({
           await clearAllData();
 
           // Parse headers to get snapshot dates
-          const headers = jsonData[0] as string[];
+             // Parse snapshot dates from headers
           const snapshotLabels: string[] = [];
           const snapshotIndices: { label: string; originalIndex: number; valueIndex: number; changeIndex: number }[] = [];
+          
+          console.log('=== DEBUG: Starting import ===');
+          console.log('Headers:', headers);;
 
           // Find currency column index
           let currencyColIndex = -1;
@@ -319,6 +322,10 @@ export const appRouter = router({
           }
 
           // Create snapshots
+          console.log('=== DEBUG: Snapshot Labels ===');
+          console.log('snapshotLabels:', snapshotLabels);
+          console.log('snapshotIndices:', snapshotIndices);
+          
           const snapshotMap: Record<string, number> = {};
           for (const label of snapshotLabels) {
             // Convert label to date - smart year detection
