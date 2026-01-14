@@ -264,7 +264,10 @@ export const appRouter = router({
             }
           }
 
-          // Find snapshot columns - support both new format (MMDD原始金额 + MMDD人民币价值) and old format (MMDD人民币价值)
+          // Find snapshot columns - support multiple formats:
+          // 1. New format: MMDD原始金额 + MMDD人民币价值
+          // 2. Old format: MMDD人民币价值 only
+          // 3. Simple format: MMDD原始金额 only (for new data entry)
           for (let i = 0; i < headers.length; i++) {
             const header = headers[i]?.toString() || "";
             // New format: MMDD原始金额
@@ -286,6 +289,11 @@ export const appRouter = router({
                     break;
                   }
                   if (nextHeader.match(/^\d{4}原始金额$/)) break;
+                }
+                // If no CNY value column found, use original column as value column
+                // (system will auto-convert based on currency)
+                if (valueIndex === -1) {
+                  valueIndex = i; // Use original amount column
                 }
                 snapshotIndices.push({ label, originalIndex: i, valueIndex, changeIndex });
               }
@@ -313,10 +321,19 @@ export const appRouter = router({
           // Create snapshots
           const snapshotMap: Record<string, number> = {};
           for (const label of snapshotLabels) {
-            // Convert label to date (assume 2024 for 11xx, 12xx; 2025 for 01xx)
+            // Convert label to date - smart year detection
             const month = parseInt(label.substring(0, 2));
             const day = parseInt(label.substring(2, 4));
-            const year = month >= 11 ? 2024 : 2025;
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth() + 1;
+            // If label month is Nov/Dec and current month is Jan-Mar, use previous year
+            // If label month is Jan and current month is Nov/Dec, use next year
+            let year = currentYear;
+            if (month >= 11 && currentMonth <= 3) {
+              year = currentYear - 1;
+            } else if (month <= 3 && currentMonth >= 11) {
+              year = currentYear + 1;
+            }
             const date = new Date(year, month - 1, day);
             const id = await upsertSnapshot({ snapshotDate: date, label });
             if (id) snapshotMap[label] = id;
@@ -415,13 +432,17 @@ export const appRouter = router({
               // New format: read original amount and convert to CNY
               if (originalIndex >= 0) {
                 originalValue = parseFloat(row[originalIndex]?.toString() || "0") || 0;
-                // If CNY value column exists, use it; otherwise calculate from original
-                if (valueIndex >= 0) {
+                // If CNY value column exists and is different from original column, use it
+                if (valueIndex >= 0 && valueIndex !== originalIndex) {
                   cnyValue = parseFloat(row[valueIndex]?.toString() || "0") || 0;
                 }
-                // If CNY value is 0 but original value exists, calculate CNY value
+                // If CNY value is 0 but original value exists, calculate CNY value based on currency
                 if (cnyValue === 0 && originalValue !== 0) {
                   cnyValue = originalValue * exchangeRate;
+                }
+                // If currency is CNY, original and CNY values should be the same
+                if (currency === 'CNY' && originalValue !== 0) {
+                  cnyValue = originalValue;
                 }
               } else {
                 // Old format: only CNY value column
@@ -566,12 +587,50 @@ export const appRouter = router({
         ["JPY", "日元", (getRate('JPY') || 0.047).toString(), "输入日元金额时使用此汇率换算"],
       ];
 
+      // Add instructions sheet for new data entry
+      const instructionsRows: any[][] = [
+        ["📋 操作指南"],
+        [""],
+        ["【如何添加新日期的数据】"],
+        ["1. 在'投资组合'表的最后一列后面添加新列"],
+        ["2. 列标题格式：MMDD原始金额（如：0114原始金额）"],
+        ["3. 在对应资产行填入该币种的原始金额"],
+        ["4. 系统会根据币种自动换算为人民币"],
+        [""],
+        ["【如何新增资产】"],
+        ["1. 在对应类别下方插入新行"],
+        ["2. 第一列：资产大类（如果是该类别第一个资产则填写类别名，否则留空）"],
+        ["3. 第二列：资产名称（标的）"],
+        ["4. 第三列：币种（CNY/USD/HKD/JPY）"],
+        ["5. 后续列：填入各日期的原始金额"],
+        [""],
+        ["【如何减持/清仓资产】"],
+        ["1. 找到对应资产行"],
+        ["2. 在最新日期列填入0或减持后的金额"],
+        ["3. 不要删除整行，保留历史数据"],
+        [""],
+        ["【币种说明】"],
+        ["CNY - 人民币：直接填入人民币金额"],
+        ["USD - 美元：填入美元金额，系统自动按汇率换算"],
+        ["HKD - 港币：填入港币金额，系统自动按汇率换算"],
+        ["JPY - 日元：填入日元金额，系统自动按汇率换算"],
+        [""],
+        ["【注意事项】"],
+        ["- 金额只需填写数字，不要带货币符号"],
+        ["- 美股资产（如谷歌、QQQ）币种应设为USD"],
+        ["- 港股资产币种应设为HKD"],
+        ["- 日股基金（如日经225）币种应设为USD或JPY"],
+        ["- 导入后可在网站上查看换算后的人民币价值"],
+      ];
+
       // Create workbook with multiple sheets
       const ws = XLSX.utils.aoa_to_sheet(rows);
       const ratesWs = XLSX.utils.aoa_to_sheet(ratesRows);
+      const instructionsWs = XLSX.utils.aoa_to_sheet(instructionsRows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "投资组合");
       XLSX.utils.book_append_sheet(wb, ratesWs, "汇率参考");
+      XLSX.utils.book_append_sheet(wb, instructionsWs, "操作指南");
 
       // Generate base64
       const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
