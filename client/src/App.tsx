@@ -18,6 +18,7 @@ import PerformanceReport from "./pages/PerformanceReport";
 import Forecast from "./pages/Forecast";
 import Insurance from "./pages/Insurance";
 import { AuthProvider, useAuthContext } from "./contexts/AuthContext";
+import { CurrencyProvider } from "./contexts/CurrencyContext";
 
 // Phase 1 重设计：新的合并页面（暂时指向现有页面）
 // 资产分析 = Holdings + Analysis + History
@@ -82,8 +83,10 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <AuthProvider>
-            <Toaster />
-            <Router />
+            <CurrencyProvider>
+              <Toaster />
+              <Router />
+            </CurrencyProvider>
           </AuthProvider>
         </TooltipProvider>
       </ThemeProvider>

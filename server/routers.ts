@@ -231,20 +231,70 @@ export const appRouter = router({
           const sheet = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
 
+          // Try to read exchange rates from second sheet
+          const exchangeRatesFromExcel: Record<string, number> = { CNY: 1, USD: 7.1, HKD: 0.91, JPY: 0.047 };
+          if (workbook.SheetNames.length > 1) {
+            const ratesSheet = workbook.Sheets[workbook.SheetNames[1]];
+            const ratesData = XLSX.utils.sheet_to_json(ratesSheet, { header: 1 }) as any[][];
+            for (let i = 1; i < ratesData.length; i++) {
+              const row = ratesData[i];
+              if (row && row[0] && row[2]) {
+                const currency = row[0].toString().toUpperCase();
+                const rate = parseFloat(row[2].toString()) || 1;
+                exchangeRatesFromExcel[currency] = rate;
+              }
+            }
+          }
+
           // Clear existing data
           await clearAllData();
 
           // Parse headers to get snapshot dates
           const headers = jsonData[0] as string[];
           const snapshotLabels: string[] = [];
-          const snapshotIndices: { label: string; valueIndex: number; changeIndex: number }[] = [];
+          const snapshotIndices: { label: string; originalIndex: number; valueIndex: number; changeIndex: number }[] = [];
 
-          // Find snapshot columns (format: MMDD人民币价值)
+          // Find currency column index
+          let currencyColIndex = -1;
           for (let i = 0; i < headers.length; i++) {
             const header = headers[i]?.toString() || "";
-            const match = header.match(/^(\d{4})人民币价值$/);
-            if (match) {
-              const label = match[1];
+            if (header === "币种" || header.toLowerCase() === "currency") {
+              currencyColIndex = i;
+              break;
+            }
+          }
+
+          // Find snapshot columns - support both new format (MMDD原始金额 + MMDD人民币价值) and old format (MMDD人民币价值)
+          for (let i = 0; i < headers.length; i++) {
+            const header = headers[i]?.toString() || "";
+            // New format: MMDD原始金额
+            const matchOriginal = header.match(/^(\d{4})原始金额$/);
+            if (matchOriginal) {
+              const label = matchOriginal[1];
+              if (!snapshotLabels.includes(label)) {
+                snapshotLabels.push(label);
+                // Find corresponding CNY value and change columns
+                let valueIndex = -1;
+                let changeIndex = -1;
+                for (let j = i + 1; j < headers.length; j++) {
+                  const nextHeader = headers[j]?.toString() || "";
+                  if (nextHeader === `${label}人民币价值`) {
+                    valueIndex = j;
+                  }
+                  if (nextHeader.includes("期末减期初")) {
+                    changeIndex = j;
+                    break;
+                  }
+                  if (nextHeader.match(/^\d{4}原始金额$/)) break;
+                }
+                snapshotIndices.push({ label, originalIndex: i, valueIndex, changeIndex });
+              }
+              continue;
+            }
+            // Old format: MMDD人民币价值 (without original amount column)
+            const matchCny = header.match(/^(\d{4})人民币价值$/);
+            if (matchCny && !snapshotLabels.includes(matchCny[1])) {
+              const label = matchCny[1];
               snapshotLabels.push(label);
               // Find corresponding change column
               let changeIndex = -1;
@@ -256,7 +306,7 @@ export const appRouter = router({
                 }
                 if (nextHeader.includes("人民币价值")) break;
               }
-              snapshotIndices.push({ label, valueIndex: i, changeIndex });
+              snapshotIndices.push({ label, originalIndex: -1, valueIndex: i, changeIndex });
             }
           }
 
@@ -321,10 +371,19 @@ export const appRouter = router({
             const categoryId = categoryMap[currentCategory];
             if (!categoryId) continue;
 
-            // Determine currency from asset name
+            // Determine currency - first check currency column, then from asset name
             let currency = "CNY";
-            if (col1.includes("USD") || col1.includes("美股")) currency = "USD";
-            if (col1.includes("HKD") || col1.includes("港股")) currency = "HKD";
+            if (currencyColIndex >= 0 && row[currencyColIndex]) {
+              const currencyFromCol = row[currencyColIndex].toString().toUpperCase().trim();
+              if (['CNY', 'USD', 'HKD', 'JPY', 'EUR', 'GBP'].includes(currencyFromCol)) {
+                currency = currencyFromCol;
+              }
+            } else {
+              // Fallback: determine from asset name
+              if (col1.includes("USD") || col1.includes("美股")) currency = "USD";
+              if (col1.includes("HKD") || col1.includes("港股")) currency = "HKD";
+              if (col1.includes("JPY") || col1.includes("日股") || col1.includes("日元")) currency = "JPY";
+            }
 
             // Create asset
             const assetId = await upsertAsset({
@@ -342,18 +401,41 @@ export const appRouter = router({
             }
             if (!actualAssetId) continue;
 
+            // Get exchange rate for this currency
+            const exchangeRate = exchangeRatesFromExcel[currency] || 1;
+
             // Parse asset values for each snapshot
-            for (const { label, valueIndex, changeIndex } of snapshotIndices) {
+            for (const { label, originalIndex, valueIndex, changeIndex } of snapshotIndices) {
               const snapshotId = snapshotMap[label];
               if (!snapshotId) continue;
 
-              const cnyValue = parseFloat(row[valueIndex]?.toString() || "0") || 0;
+              let originalValue = 0;
+              let cnyValue = 0;
+
+              // New format: read original amount and convert to CNY
+              if (originalIndex >= 0) {
+                originalValue = parseFloat(row[originalIndex]?.toString() || "0") || 0;
+                // If CNY value column exists, use it; otherwise calculate from original
+                if (valueIndex >= 0) {
+                  cnyValue = parseFloat(row[valueIndex]?.toString() || "0") || 0;
+                }
+                // If CNY value is 0 but original value exists, calculate CNY value
+                if (cnyValue === 0 && originalValue !== 0) {
+                  cnyValue = originalValue * exchangeRate;
+                }
+              } else {
+                // Old format: only CNY value column
+                cnyValue = parseFloat(row[valueIndex]?.toString() || "0") || 0;
+                originalValue = currency === 'CNY' ? cnyValue : (exchangeRate > 0 ? cnyValue / exchangeRate : cnyValue);
+              }
+
               const change = changeIndex >= 0 ? (parseFloat(row[changeIndex]?.toString() || "0") || 0) : 0;
 
-              if (cnyValue !== 0) {
+              if (cnyValue !== 0 || originalValue !== 0) {
                 await upsertAssetValue({
                   assetId: actualAssetId,
                   snapshotId,
+                  originalValue: originalValue.toString(),
                   cnyValue: cnyValue.toString(),
                   changeFromPrevious: change.toString(),
                 });
@@ -412,10 +494,20 @@ export const appRouter = router({
       const snapshotsList = await getAllSnapshots();
       const values = await getAssetValues();
       const summaries = await getAllPortfolioSummaries();
+      const exchangeRates = await getAllExchangeRates();
 
-      // Build export data
-      const headers = ["资产大类", "标的"];
+      // Get latest exchange rates
+      const getRate = (currency: string): number => {
+        if (currency === 'CNY') return 1;
+        const rate = exchangeRates.find(r => r.fromCurrency === currency && r.toCurrency === 'CNY');
+        return rate ? parseFloat(rate.rate) : (currency === 'USD' ? 7.1 : currency === 'HKD' ? 0.91 : 1);
+      };
+
+      // Build export data with currency support
+      // 新格式：资产大类 | 标的 | 币种 | 最新快照的原始金额 | 最新快照的人民币价值 | 期末减期初 | ...
+      const headers = ["资产大类", "标的", "币种"];
       for (const snapshot of snapshotsList) {
+        headers.push(`${snapshot.label}原始金额`);
         headers.push(`${snapshot.label}人民币价值`);
         headers.push("期末减期初");
       }
@@ -423,10 +515,11 @@ export const appRouter = router({
       const rows: any[][] = [headers];
 
       // Group values by asset
-      const valuesByAsset: Record<number, Record<number, { cnyValue: string; change: string }>> = {};
+      const valuesByAsset: Record<number, Record<number, { originalValue: string; cnyValue: string; change: string }>> = {};
       for (const v of values) {
         if (!valuesByAsset[v.assetId]) valuesByAsset[v.assetId] = {};
         valuesByAsset[v.assetId][v.snapshotId] = {
+          originalValue: v.originalValue?.toString() || v.cnyValue?.toString() || "0",
           cnyValue: v.cnyValue?.toString() || "0",
           change: v.changeFromPrevious?.toString() || "0",
         };
@@ -437,9 +530,15 @@ export const appRouter = router({
         const categoryAssets = assets.filter(a => a.categoryId === category.id);
         for (let i = 0; i < categoryAssets.length; i++) {
           const asset = categoryAssets[i];
-          const row: any[] = [i === 0 ? category.name : "", asset.name];
+          const currency = asset.currency || 'CNY';
+          const row: any[] = [i === 0 ? category.name : "", asset.name, currency];
           for (const snapshot of snapshotsList) {
             const val = valuesByAsset[asset.id]?.[snapshot.id];
+            // 如果有原始金额，显示原始金额；否则根据币种反算
+            const cnyValue = parseFloat(val?.cnyValue || "0");
+            const rate = getRate(currency);
+            const originalValue = val?.originalValue ? parseFloat(val.originalValue) : (rate > 0 ? cnyValue / rate : cnyValue);
+            row.push(originalValue.toFixed(2));
             row.push(val?.cnyValue || "0");
             row.push(val?.change || "0");
           }
@@ -448,18 +547,31 @@ export const appRouter = router({
       }
 
       // Add summary row
-      const summaryRow: any[] = ["总计", ""];
+      const summaryRow: any[] = ["总计", "", "CNY"];
       for (const snapshot of snapshotsList) {
         const summary = summaries.find(s => s.snapshotId === snapshot.id);
+        summaryRow.push(summary?.totalValue || "0");
         summaryRow.push(summary?.totalValue || "0");
         summaryRow.push("");
       }
       rows.push(summaryRow);
 
-      // Create workbook
+      // Add exchange rates sheet
+      const ratesHeaders = ["货币代码", "货币名称", "兑人民币汇率", "说明"];
+      const ratesRows: any[][] = [
+        ratesHeaders,
+        ["CNY", "人民币", "1", "基准货币"],
+        ["USD", "美元", getRate('USD').toString(), "输入美元金额时使用此汇率换算"],
+        ["HKD", "港币", getRate('HKD').toString(), "输入港币金额时使用此汇率换算"],
+        ["JPY", "日元", (getRate('JPY') || 0.047).toString(), "输入日元金额时使用此汇率换算"],
+      ];
+
+      // Create workbook with multiple sheets
       const ws = XLSX.utils.aoa_to_sheet(rows);
+      const ratesWs = XLSX.utils.aoa_to_sheet(ratesRows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "投资组合");
+      XLSX.utils.book_append_sheet(wb, ratesWs, "汇率参考");
 
       // Generate base64
       const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });

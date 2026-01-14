@@ -46,45 +46,7 @@ const COLORS = [
   "hsl(280, 65%, 60%)",  // Pink
 ];
 
-// 汇率配置
-const EXCHANGE_RATE_USD = 7.25;
-
-type CurrencyDisplay = "CNY" | "USD";
-
-function formatCurrency(value: number | string, currency: CurrencyDisplay = "CNY"): string {
-  const num = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(num)) return currency === "CNY" ? "¥0.00" : "$0.00";
-  
-  if (currency === "USD") {
-    const usdValue = num / EXCHANGE_RATE_USD;
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-    }).format(usdValue);
-  }
-  
-  return new Intl.NumberFormat("zh-CN", {
-    style: "currency",
-    currency: "CNY",
-    minimumFractionDigits: 2,
-  }).format(num);
-}
-
-function formatCompactCurrency(value: number, currency: CurrencyDisplay = "CNY"): string {
-  if (currency === "USD") {
-    const usdValue = value / EXCHANGE_RATE_USD;
-    if (usdValue >= 10000) {
-      return `$${(usdValue / 10000).toFixed(1)}万`;
-    }
-    return formatCurrency(value, currency);
-  }
-  
-  if (value >= 10000) {
-    return `¥${(value / 10000).toFixed(1)}万`;
-  }
-  return formatCurrency(value, currency);
-}
+import { useCurrency, CurrencyDisplay, CURRENCY_INFO } from "@/contexts/CurrencyContext";
 
 function formatROI(roi: number): string {
   const sign = roi >= 0 ? '+' : '';
@@ -93,7 +55,7 @@ function formatROI(roi: number): string {
 
 export default function Dashboard() {
   const [isImporting, setIsImporting] = useState(false);
-  const [displayCurrency, setDisplayCurrency] = useState<CurrencyDisplay>("CNY");
+  const { displayCurrency, setDisplayCurrency, formatCurrency, exchangeRates } = useCurrency();
   
   const { data: dashboardData, isLoading, refetch } = trpc.dashboard.overview.useQuery();
   const importMutation = trpc.import.excel.useMutation();
@@ -227,6 +189,7 @@ export default function Dashboard() {
               <SelectContent>
                 <SelectItem value="CNY">人民币 ¥</SelectItem>
                 <SelectItem value="USD">美元 $</SelectItem>
+                <SelectItem value="HKD">港币 HK$</SelectItem>
               </SelectContent>
             </Select>
             
@@ -263,9 +226,9 @@ export default function Dashboard() {
         </div>
 
         {/* 货币提示 */}
-        {displayCurrency === "USD" && (
+        {displayCurrency !== "CNY" && (
           <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
-            当前以美元显示，汇率：1 USD = {EXCHANGE_RATE_USD} CNY（仅供参考）
+            当前以{CURRENCY_INFO[displayCurrency].name}显示，汇率：1 {displayCurrency} = {exchangeRates[displayCurrency]?.toFixed(2) || '1.00'} CNY（仅供参考）
           </div>
         )}
 
@@ -295,7 +258,7 @@ export default function Dashboard() {
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">总资产</p>
-                      <p className="text-2xl font-bold">{formatCurrency(totalValue, displayCurrency)}</p>
+                      <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
                       {dashboardData?.overallRoi !== undefined && (
                         <p className={`text-sm mt-2 font-semibold ${
                           dashboardData.overallRoi >= 0 ? 'text-green-600' : 'text-red-600'
@@ -317,7 +280,7 @@ export default function Dashboard() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">本期盈亏</p>
                       <p className={`text-2xl font-bold ${latestChange >= 0 ? "number-positive" : "number-negative"}`}>
-                        {latestChange >= 0 ? "+" : ""}{formatCurrency(latestChange, displayCurrency)}
+                        {latestChange >= 0 ? "+" : ""}{formatCurrency(latestChange)}
                       </p>
                     </div>
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
@@ -395,7 +358,7 @@ export default function Dashboard() {
                           ))}
                         </Pie>
                         <Tooltip 
-                          formatter={(value: number) => formatCurrency(value, displayCurrency)}
+                          formatter={(value: number) => formatCurrency(value)}
                           contentStyle={{
                             backgroundColor: "white",
                             border: "1px solid #e5e7eb",
@@ -421,7 +384,7 @@ export default function Dashboard() {
                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                         <XAxis 
                           type="number" 
-                          tickFormatter={(value) => formatCompactCurrency(value, displayCurrency)}
+                          tickFormatter={(value) => formatCurrency(value, true)}
                           stroke="#888"
                         />
                         <YAxis 
@@ -432,7 +395,7 @@ export default function Dashboard() {
                           tick={{ fontSize: 12 }}
                         />
                         <Tooltip 
-                          formatter={(value: number) => formatCurrency(value, displayCurrency)}
+                          formatter={(value: number) => formatCurrency(value)}
                           contentStyle={{
                             backgroundColor: "white",
                             border: "1px solid #e5e7eb",
@@ -468,13 +431,13 @@ export default function Dashboard() {
                         tick={{ fontSize: 12 }}
                       />
                       <YAxis 
-                        tickFormatter={(value) => formatCompactCurrency(value, displayCurrency)}
+                        tickFormatter={(value) => formatCurrency(value, true)}
                         stroke="#888"
                         tick={{ fontSize: 12 }}
                       />
                       <Tooltip 
                         formatter={(value: number, name: string) => [
-                          formatCurrency(value, displayCurrency),
+                          formatCurrency(value),
                           name === "value" ? "总资产" : "变动"
                         ]}
                         contentStyle={{
