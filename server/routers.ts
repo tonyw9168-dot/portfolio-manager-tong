@@ -250,12 +250,12 @@ export const appRouter = router({
           await clearAllData();
 
           // Parse headers to get snapshot dates
-             // Parse snapshot dates from headers
+          const headers = jsonData[0] || [];
           const snapshotLabels: string[] = [];
           const snapshotIndices: { label: string; originalIndex: number; valueIndex: number; changeIndex: number }[] = [];
           
           console.log('=== DEBUG: Starting import ===');
-          console.log('Headers:', headers);;
+          console.log('Headers:', headers);
 
           // Find currency column index
           let currencyColIndex = -1;
