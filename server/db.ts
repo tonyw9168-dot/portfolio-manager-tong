@@ -155,7 +155,11 @@ export async function getDb() {
         ssl: {
           minVersion: 'TLSv1.2',
           rejectUnauthorized: false
-        }
+        },
+        connectTimeout: 30000,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0
       });
       
       _db = drizzle({ client: _connection });

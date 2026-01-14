@@ -507,9 +507,10 @@ export const appRouter = router({
           });
 
           return { success: true, message: "数据导入成功" };
-        } catch (error) {
+        } catch (error: any) {
           console.error("Import error:", error);
-          return { success: false, message: `导入失败: ${error}` };
+          const errorMessage = error?.message || error?.toString() || '未知错误';
+          return { success: false, message: `导入失败: ${errorMessage}` };
         }
       }),
   }),

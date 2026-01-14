@@ -87,9 +87,10 @@ export default function Dashboard() {
         } else {
           toast.error(result.message || "导入失败");
         }
-      } catch (error) {
-        toast.error("导入失败，请检查文件格式");
-        console.error(error);
+      } catch (error: any) {
+        const errorMsg = error?.message || error?.toString() || '未知错误';
+        toast.error(`导入失败: ${errorMsg}`);
+        console.error('Import error:', error);
       } finally {
         setIsImporting(false);
       }
