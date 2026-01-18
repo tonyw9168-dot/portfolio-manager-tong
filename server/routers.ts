@@ -471,23 +471,63 @@ export const appRouter = router({
             }
           }
 
-          // Parse portfolio summary (total row)
+          // Parse portfolio summary (total row) with auto-calculation fallback
+          // First, collect all asset values by snapshot for auto-calculation
+          const assetValuesBySnapshot: Record<number, number> = {};
+          const allAssetValues = await getAssetValues();
+          for (const av of allAssetValues) {
+            if (!assetValuesBySnapshot[av.snapshotId]) {
+              assetValuesBySnapshot[av.snapshotId] = 0;
+            }
+            assetValuesBySnapshot[av.snapshotId] += parseFloat(av.cnyValue?.toString() || "0");
+          }
+          
+          // Process total row from Excel
+          let foundTotalRow = false;
           for (let rowIndex = 1; rowIndex < jsonData.length; rowIndex++) {
             const row = jsonData[rowIndex];
             if (!row) continue;
             const col0 = row[0]?.toString()?.trim() || "";
             
             if (col0 === "总计") {
+              foundTotalRow = true;
               for (const { label, valueIndex } of snapshotIndices) {
                 const snapshotId = snapshotMap[label];
                 if (!snapshotId) continue;
-                const totalValue = parseFloat(row[valueIndex]?.toString() || "0") || 0;
+                
+                // Try to get total value from Excel
+                let totalValue = parseFloat(row[valueIndex]?.toString() || "0") || 0;
+                
+                // If Excel total is 0 or missing, auto-calculate from asset values
+                if (totalValue === 0) {
+                  totalValue = assetValuesBySnapshot[snapshotId] || 0;
+                  if (totalValue > 0) {
+                    console.log(`[Import] Auto-calculated total for snapshot ${label}: ${totalValue.toFixed(2)}`);
+                  }
+                }
+                
                 if (totalValue > 0) {
                   await upsertPortfolioSummary({
                     snapshotId,
-                    totalValue: totalValue.toString(),
+                    totalValue: totalValue.toFixed(2),
                   });
                 }
+              }
+            }
+          }
+          
+          // If no total row found in Excel, create portfolio summaries from calculated values
+          if (!foundTotalRow) {
+            console.log('[Import] No total row found, auto-calculating all portfolio summaries');
+            for (const { label } of snapshotIndices) {
+              const snapshotId = snapshotMap[label];
+              if (!snapshotId) continue;
+              const totalValue = assetValuesBySnapshot[snapshotId] || 0;
+              if (totalValue > 0) {
+                await upsertPortfolioSummary({
+                  snapshotId,
+                  totalValue: totalValue.toFixed(2),
+                });
               }
             }
           }
