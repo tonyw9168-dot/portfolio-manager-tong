@@ -5,6 +5,15 @@ import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as XLSX from "xlsx";
 import {
+  getExchangeRates,
+  convertCurrency,
+  getExchangeRate,
+  getBatchExchangeRates,
+  getSupportedCurrencies,
+  getCurrencyName,
+  getCurrencySymbol,
+} from "./exchangeRateService";
+import {
   getAllCategories, upsertCategory, getCategoryByName,
   getAllAssets, getAssetsByCategory, upsertAsset, getAssetByNameAndCategory, getAssetById, deleteAsset, updateAsset,
   getAllSnapshots, upsertSnapshot, getSnapshotByLabel,
@@ -758,6 +767,456 @@ export const appRouter = router({
         overallRoi: parseFloat(overallRoi.toFixed(2)),
       };
     }),
+  }),
+
+  // ==================== 涨跌分析相关API ====================
+  
+  // 涨跌分析
+  priceChange: router({
+    // 获取实时汇率
+    exchangeRates: publicProcedure.query(async () => {
+      const rates = await getExchangeRates('USD');
+      const currencies = getSupportedCurrencies();
+      
+      return {
+        baseCurrency: 'USD',
+        rates,
+        currencies: currencies.map(code => ({
+          code,
+          name: getCurrencyName(code),
+          symbol: getCurrencySymbol(code),
+          rateToUSD: rates[code] || 1,
+        })),
+        lastUpdated: new Date().toISOString(),
+      };
+    }),
+
+    // 货币转换
+    convert: publicProcedure
+      .input(z.object({
+        amount: z.number(),
+        fromCurrency: z.string(),
+        toCurrency: z.string(),
+      }))
+      .query(async ({ input }) => {
+        const result = await convertCurrency(input.amount, input.fromCurrency, input.toCurrency);
+        const rate = await getExchangeRate(input.fromCurrency, input.toCurrency);
+        return {
+          originalAmount: input.amount,
+          convertedAmount: result,
+          fromCurrency: input.fromCurrency,
+          toCurrency: input.toCurrency,
+          exchangeRate: rate,
+        };
+      }),
+
+    // 获取涨跌分析数据
+    analysis: publicProcedure
+      .input(z.object({
+        startSnapshotId: z.number(),
+        endSnapshotId: z.number(),
+        currency: z.string().default('CNY'), // 显示货币：CNY 或 USD
+        categoryFilter: z.string().optional(), // 类别筛选
+      }))
+      .query(async ({ input }) => {
+        const { startSnapshotId, endSnapshotId, currency, categoryFilter } = input;
+        
+        // 获取所有数据
+        const categories = await getAllCategories();
+        const assets = await getAllAssets();
+        const allSnapshots = await getAllSnapshots();
+        const allValues = await getAssetValues();
+        const summaries = await getAllPortfolioSummaries();
+        
+        // 获取汇率
+        const rates = await getExchangeRates('USD');
+        const cnyToUsd = rates['CNY'] || 0.1389;
+        const usdToCny = 1 / cnyToUsd;
+        
+        // 找到起始和结束快照
+        const startSnapshot = allSnapshots.find(s => s.id === startSnapshotId);
+        const endSnapshot = allSnapshots.find(s => s.id === endSnapshotId);
+        
+        if (!startSnapshot || !endSnapshot) {
+          return { success: false, message: '快照不存在' };
+        }
+        
+        // 获取起始和结束的总值
+        const startSummary = summaries.find(s => s.snapshotId === startSnapshotId);
+        const endSummary = summaries.find(s => s.snapshotId === endSnapshotId);
+        
+        const startTotalCNY = parseFloat(startSummary?.totalValue?.toString() || '0');
+        const endTotalCNY = parseFloat(endSummary?.totalValue?.toString() || '0');
+        
+        // 根据显示货币转换总值
+        const convertValue = (cnyValue: number): number => {
+          if (currency === 'USD') {
+            return cnyValue * cnyToUsd;
+          }
+          return cnyValue;
+        };
+        
+        const startTotal = convertValue(startTotalCNY);
+        const endTotal = convertValue(endTotalCNY);
+        const totalChange = endTotal - startTotal;
+        const totalChangePercent = startTotal > 0 ? (totalChange / startTotal) * 100 : 0;
+        
+        // 计算天数
+        const daysDiff = Math.ceil(
+          (new Date(endSnapshot.snapshotDate).getTime() - new Date(startSnapshot.snapshotDate).getTime()) 
+          / (1000 * 60 * 60 * 24)
+        );
+        
+        // 构建资产涨跌明细
+        const assetChanges: Array<{
+          assetId: number;
+          assetName: string;
+          categoryId: number;
+          categoryName: string;
+          startValue: number;
+          endValue: number;
+          change: number;
+          changePercent: number;
+          contribution: number; // 对总涨跌的贡献度
+          originalCurrency: string;
+        }> = [];
+        
+        // 按资产计算涨跌
+        for (const asset of assets) {
+          // 如果有类别筛选，跳过不匹配的
+          if (categoryFilter && categoryFilter !== 'all') {
+            const category = categories.find(c => c.id === asset.categoryId);
+            if (category?.name !== categoryFilter) continue;
+          }
+          
+          const startValue = allValues.find(
+            v => v.assetId === asset.id && v.snapshotId === startSnapshotId
+          );
+          const endValue = allValues.find(
+            v => v.assetId === asset.id && v.snapshotId === endSnapshotId
+          );
+          
+          const startCNY = parseFloat(startValue?.cnyValue?.toString() || '0');
+          const endCNY = parseFloat(endValue?.cnyValue?.toString() || '0');
+          
+          // 跳过两个时间点都为0的资产
+          if (startCNY === 0 && endCNY === 0) continue;
+          
+          const category = categories.find(c => c.id === asset.categoryId);
+          const startConverted = convertValue(startCNY);
+          const endConverted = convertValue(endCNY);
+          const change = endConverted - startConverted;
+          const changePercent = startConverted > 0 ? (change / startConverted) * 100 : (endConverted > 0 ? 100 : 0);
+          const contribution = totalChange !== 0 ? (change / Math.abs(totalChange)) * 100 : 0;
+          
+          assetChanges.push({
+            assetId: asset.id,
+            assetName: asset.name,
+            categoryId: asset.categoryId,
+            categoryName: category?.name || '未知',
+            startValue: startConverted,
+            endValue: endConverted,
+            change,
+            changePercent,
+            contribution,
+            originalCurrency: asset.currency || 'CNY',
+          });
+        }
+        
+        // 按涨跌幅排序
+        const sortedByChangePercent = [...assetChanges].sort((a, b) => b.changePercent - a.changePercent);
+        
+        // 按涨跌额排序
+        const sortedByChange = [...assetChanges].sort((a, b) => b.change - a.change);
+        
+        // 按类别汇总
+        const categoryChanges: Array<{
+          categoryId: number;
+          categoryName: string;
+          startValue: number;
+          endValue: number;
+          change: number;
+          changePercent: number;
+          contribution: number;
+          assetCount: number;
+        }> = [];
+        
+        for (const category of categories) {
+          const categoryAssets = assetChanges.filter(a => a.categoryId === category.id);
+          if (categoryAssets.length === 0) continue;
+          
+          const startValue = categoryAssets.reduce((sum, a) => sum + a.startValue, 0);
+          const endValue = categoryAssets.reduce((sum, a) => sum + a.endValue, 0);
+          const change = endValue - startValue;
+          const changePercent = startValue > 0 ? (change / startValue) * 100 : 0;
+          const contribution = totalChange !== 0 ? (change / Math.abs(totalChange)) * 100 : 0;
+          
+          categoryChanges.push({
+            categoryId: category.id,
+            categoryName: category.name,
+            startValue,
+            endValue,
+            change,
+            changePercent,
+            contribution,
+            assetCount: categoryAssets.length,
+          });
+        }
+        
+        // 涨跌统计
+        const upCount = assetChanges.filter(a => a.change > 0).length;
+        const downCount = assetChanges.filter(a => a.change < 0).length;
+        const unchangedCount = assetChanges.filter(a => a.change === 0).length;
+        
+        // 涨幅前5和跌幅前5
+        const topGainers = sortedByChangePercent.filter(a => a.change > 0).slice(0, 5);
+        const topLosers = sortedByChangePercent.filter(a => a.change < 0).slice(-5).reverse();
+        
+        return {
+          success: true,
+          summary: {
+            startSnapshot: {
+              id: startSnapshot.id,
+              label: startSnapshot.label,
+              date: startSnapshot.snapshotDate,
+            },
+            endSnapshot: {
+              id: endSnapshot.id,
+              label: endSnapshot.label,
+              date: endSnapshot.snapshotDate,
+            },
+            startTotal,
+            endTotal,
+            totalChange,
+            totalChangePercent,
+            daysDiff,
+            currency,
+            currencySymbol: getCurrencySymbol(currency),
+          },
+          statistics: {
+            upCount,
+            downCount,
+            unchangedCount,
+            totalAssets: assetChanges.length,
+          },
+          assetChanges,
+          sortedByChangePercent,
+          sortedByChange,
+          categoryChanges,
+          topGainers,
+          topLosers,
+          exchangeRates: {
+            CNY_USD: cnyToUsd,
+            USD_CNY: usdToCny,
+          },
+        };
+      }),
+
+    // 获取快捷时间范围选项
+    quickRanges: publicProcedure.query(async () => {
+      const allSnapshots = await getAllSnapshots();
+      
+      if (allSnapshots.length < 2) {
+        return { ranges: [], snapshots: allSnapshots };
+      }
+      
+      const sortedSnapshots = [...allSnapshots].sort(
+        (a, b) => new Date(a.snapshotDate).getTime() - new Date(b.snapshotDate).getTime()
+      );
+      
+      const latestSnapshot = sortedSnapshots[sortedSnapshots.length - 1];
+      const latestDate = new Date(latestSnapshot.snapshotDate);
+      
+      // 计算快捷范围
+      const ranges: Array<{
+        label: string;
+        startSnapshotId: number | null;
+        endSnapshotId: number;
+        description: string;
+      }> = [];
+      
+      // 最近一周（7天内）
+      const oneWeekAgo = new Date(latestDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const weekSnapshot = sortedSnapshots.find(
+        s => new Date(s.snapshotDate).getTime() >= oneWeekAgo.getTime() && s.id !== latestSnapshot.id
+      ) || sortedSnapshots[sortedSnapshots.length - 2];
+      
+      if (weekSnapshot) {
+        ranges.push({
+          label: '最近一周',
+          startSnapshotId: weekSnapshot.id,
+          endSnapshotId: latestSnapshot.id,
+          description: `${weekSnapshot.label} → ${latestSnapshot.label}`,
+        });
+      }
+      
+      // 最近一月（30天内）
+      const oneMonthAgo = new Date(latestDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const monthSnapshot = sortedSnapshots.find(
+        s => new Date(s.snapshotDate).getTime() >= oneMonthAgo.getTime() && s.id !== latestSnapshot.id
+      );
+      
+      if (monthSnapshot && monthSnapshot.id !== weekSnapshot?.id) {
+        ranges.push({
+          label: '最近一月',
+          startSnapshotId: monthSnapshot.id,
+          endSnapshotId: latestSnapshot.id,
+          description: `${monthSnapshot.label} → ${latestSnapshot.label}`,
+        });
+      }
+      
+      // 本季度（90天内）
+      const oneQuarterAgo = new Date(latestDate.getTime() - 90 * 24 * 60 * 60 * 1000);
+      const quarterSnapshot = sortedSnapshots.find(
+        s => new Date(s.snapshotDate).getTime() >= oneQuarterAgo.getTime() && s.id !== latestSnapshot.id
+      );
+      
+      if (quarterSnapshot && quarterSnapshot.id !== monthSnapshot?.id) {
+        ranges.push({
+          label: '本季度',
+          startSnapshotId: quarterSnapshot.id,
+          endSnapshotId: latestSnapshot.id,
+          description: `${quarterSnapshot.label} → ${latestSnapshot.label}`,
+        });
+      }
+      
+      // 全部时间
+      if (sortedSnapshots.length >= 2) {
+        ranges.push({
+          label: '全部时间',
+          startSnapshotId: sortedSnapshots[0].id,
+          endSnapshotId: latestSnapshot.id,
+          description: `${sortedSnapshots[0].label} → ${latestSnapshot.label}`,
+        });
+      }
+      
+      return {
+        ranges,
+        snapshots: sortedSnapshots.map(s => ({
+          id: s.id,
+          label: s.label,
+          date: s.snapshotDate,
+        })),
+      };
+    }),
+
+    // 导出涨跌分析数据为Excel
+    exportExcel: publicProcedure
+      .input(z.object({
+        startSnapshotId: z.number(),
+        endSnapshotId: z.number(),
+        currency: z.string().default('CNY'),
+      }))
+      .query(async ({ input }) => {
+        const { startSnapshotId, endSnapshotId, currency } = input;
+        
+        // 获取所有数据
+        const categories = await getAllCategories();
+        const assets = await getAllAssets();
+        const allSnapshots = await getAllSnapshots();
+        const allValues = await getAssetValues();
+        const summaries = await getAllPortfolioSummaries();
+        
+        // 获取汇率
+        const rates = await getExchangeRates('USD');
+        const cnyToUsd = rates['CNY'] || 0.1389;
+        
+        const convertValue = (cnyValue: number): number => {
+          if (currency === 'USD') {
+            return cnyValue * cnyToUsd;
+          }
+          return cnyValue;
+        };
+        
+        const currencySymbol = getCurrencySymbol(currency);
+        
+        // 找到快照
+        const startSnapshot = allSnapshots.find(s => s.id === startSnapshotId);
+        const endSnapshot = allSnapshots.find(s => s.id === endSnapshotId);
+        
+        if (!startSnapshot || !endSnapshot) {
+          return { success: false, message: '快照不存在' };
+        }
+        
+        // 构建导出数据
+        const headers = [
+          '资产名称',
+          '类别',
+          `期初价值(${currencySymbol})`,
+          `期末价值(${currencySymbol})`,
+          `涨跌额(${currencySymbol})`,
+          '涨跌幅(%)',
+          '原始币种',
+        ];
+        
+        const rows: any[][] = [headers];
+        
+        // 添加资产数据
+        for (const asset of assets) {
+          const category = categories.find(c => c.id === asset.categoryId);
+          
+          const startValue = allValues.find(
+            v => v.assetId === asset.id && v.snapshotId === startSnapshotId
+          );
+          const endValue = allValues.find(
+            v => v.assetId === asset.id && v.snapshotId === endSnapshotId
+          );
+          
+          const startCNY = parseFloat(startValue?.cnyValue?.toString() || '0');
+          const endCNY = parseFloat(endValue?.cnyValue?.toString() || '0');
+          
+          if (startCNY === 0 && endCNY === 0) continue;
+          
+          const startConverted = convertValue(startCNY);
+          const endConverted = convertValue(endCNY);
+          const change = endConverted - startConverted;
+          const changePercent = startConverted > 0 ? (change / startConverted) * 100 : 0;
+          
+          rows.push([
+            asset.name,
+            category?.name || '未知',
+            startConverted.toFixed(2),
+            endConverted.toFixed(2),
+            change.toFixed(2),
+            changePercent.toFixed(2),
+            asset.currency || 'CNY',
+          ]);
+        }
+        
+        // 添加汇总行
+        const startSummary = summaries.find(s => s.snapshotId === startSnapshotId);
+        const endSummary = summaries.find(s => s.snapshotId === endSnapshotId);
+        const startTotal = convertValue(parseFloat(startSummary?.totalValue?.toString() || '0'));
+        const endTotal = convertValue(parseFloat(endSummary?.totalValue?.toString() || '0'));
+        const totalChange = endTotal - startTotal;
+        const totalChangePercent = startTotal > 0 ? (totalChange / startTotal) * 100 : 0;
+        
+        rows.push([]);
+        rows.push([
+          '总计',
+          '',
+          startTotal.toFixed(2),
+          endTotal.toFixed(2),
+          totalChange.toFixed(2),
+          totalChangePercent.toFixed(2),
+          currency,
+        ]);
+        
+        // 创建工作簿
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '涨跌分析');
+        
+        // 生成base64
+        const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        const base64 = Buffer.from(buffer).toString('base64');
+        
+        return {
+          success: true,
+          data: base64,
+          filename: `price_change_${startSnapshot.label}_to_${endSnapshot.label}.xlsx`,
+        };
+      }),
   }),
 
   // ==================== 家庭保险相关API ====================

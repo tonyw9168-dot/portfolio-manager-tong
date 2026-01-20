@@ -1,4 +1,5 @@
 import Layout from "@/components/Layout";
+import PriceChangeAnalysis from "@/components/PriceChangeAnalysis";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -456,6 +457,9 @@ export default function AnalysisPage() {
 
           {/* 按时间视图 */}
           <TabsContent value="time" className="space-y-6">
+            {/* 涨跌分析模块 */}
+            <PriceChangeAnalysis />
+
             {/* 时间点对比 */}
             <Card>
               <CardHeader className="pb-2">
