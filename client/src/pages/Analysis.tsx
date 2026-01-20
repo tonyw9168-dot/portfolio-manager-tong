@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import PriceChangeAnalysis from "@/components/PriceChangeAnalysis";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
@@ -434,6 +435,9 @@ export default function AnalysisPage() {
 
         {/* 按时间视图 */}
         <TabsContent value="time" className="space-y-4">
+          {/* 涨跌分析组件 */}
+          <PriceChangeAnalysis />
+          
           <Card>
             <CardHeader>
               <CardTitle>各类别历史趋势</CardTitle>
